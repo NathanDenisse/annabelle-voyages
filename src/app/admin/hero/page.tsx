@@ -3,9 +3,8 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import Image from "next/image";
-import { Upload, Trash2, Film } from "lucide-react";
-import { uploadSingleImage, uploadVideo, deleteFileByUrl } from "@/lib/storage";
+import { Trash2, Film } from "lucide-react";
+import { uploadVideo, deleteFileByUrl } from "@/lib/storage";
 import { updateSiteContent } from "@/lib/firestore";
 import { useSiteContent } from "@/hooks/useFirestore";
 import { useAutosave } from "@/hooks/useAutosave";
@@ -14,20 +13,16 @@ import toast from "react-hot-toast";
 
 export default function HeroAdmin() {
   const { content, loading } = useSiteContent();
-  const [heroImageUrl, setHeroImageUrl] = useState("");
   const [heroVideoUrl, setHeroVideoUrl] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
   const [taglineFr, setTaglineFr] = useState("");
   const [taglineEn, setTaglineEn] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     if (!loading && !initialized) {
-      setHeroImageUrl(content.heroImageUrl || "");
       setHeroVideoUrl(content.heroVideoUrl || "");
       setTaglineFr(content.heroTagline.fr);
       setTaglineEn(content.heroTagline.en);
@@ -44,19 +39,6 @@ export default function HeroAdmin() {
     []
   );
   const saveStatus = useAutosave(taglineData, saveTagline, 800, initialized);
-
-  const handleImageUpload = async (file: File) => {
-    setUploading(true);
-    try {
-      const url = await uploadSingleImage(file, `hero/background.jpg`, 1920);
-      setHeroImageUrl(url);
-      await updateSiteContent({ heroImageUrl: url });
-    } catch {
-      toast.error("Erreur lors de l'upload.");
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleVideoUpload = async (file: File) => {
     if (!file.type.startsWith("video/")) {
@@ -93,7 +75,7 @@ export default function HeroAdmin() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-serif text-2xl font-medium text-brown-900">Hero</h1>
-          <p className="font-sans text-sm text-brown-400 mt-0.5">Image de fond, vidéo et tagline</p>
+          <p className="font-sans text-sm text-brown-400 mt-0.5">Vidéo et tagline</p>
         </div>
         <SaveIndicator status={saveStatus} />
       </div>
@@ -109,7 +91,7 @@ export default function HeroAdmin() {
             ref={videoRef}
             type="file"
             accept="video/*"
-                        className="hidden"
+            className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) handleVideoUpload(f);
@@ -172,46 +154,6 @@ export default function HeroAdmin() {
               )}
             </button>
           )}
-        </div>
-
-        {/* Image upload (fallback) */}
-        <div className="bg-white rounded-2xl border border-blush-100 p-6">
-          <h2 className="font-serif text-base font-medium text-brown-800 mb-1">Image de fond (fallback)</h2>
-          <p className="font-sans text-xs text-brown-400 mb-4">
-            Affichée pendant le chargement de la vidéo, ou si aucune vidéo n&apos;est uploadée.
-          </p>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-                        className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleImageUpload(f);
-            }}
-          />
-
-          <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-blush-100 mb-4 cursor-pointer" onClick={() => fileRef.current?.click()}>
-            <Image
-              src={heroImageUrl || "/images/placeholders/hero.svg"}
-              alt="Hero preview"
-              fill
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center gap-2 opacity-0 hover:opacity-100 transition-opacity">
-              <Upload size={28} className="text-white" />
-              <p className="text-white font-sans text-sm font-medium">Changer l&apos;image</p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="w-full py-3 border-2 border-dashed border-blush-200 rounded-xl font-sans text-sm text-brown-500 hover:border-terracotta-300 hover:text-terracotta-500 transition-colors flex items-center justify-center gap-2"
-          >
-            <Upload size={16} />
-            {uploading ? "Upload en cours..." : "Choisir une image"}
-          </button>
         </div>
 
         {/* Tagline */}

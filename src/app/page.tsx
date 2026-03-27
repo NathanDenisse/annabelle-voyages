@@ -23,7 +23,7 @@ export default function Home() {
     <LanguageContext.Provider value={{ lang, setLang }}>
       <main>
         <Navbar />
-        <Hero content={content} socials={socials} heroImageUrl={content.heroImageUrl} />
+        <Hero content={content} socials={socials} />
         <About content={content} aboutImageUrl={content.aboutImageUrl} socials={socials} />
         <Portfolio items={portfolioItems} content={content} />
         <Partnerships items={partnerships} content={content} />

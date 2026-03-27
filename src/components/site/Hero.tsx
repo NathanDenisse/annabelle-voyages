@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { Instagram, Youtube, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
@@ -10,7 +9,6 @@ import { SiteContent, SocialLinks } from "@/types";
 interface HeroProps {
   content: SiteContent;
   socials: SocialLinks;
-  heroImageUrl?: string;
 }
 
 function TikTokIcon({ size = 20 }: { size?: number }) {
@@ -21,35 +19,26 @@ function TikTokIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export default function Hero({ content, socials, heroImageUrl }: HeroProps) {
+export default function Hero({ content, socials }: HeroProps) {
   const { lang } = useLanguage();
-  const [mediaReady, setMediaReady] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [contentVisible, setContentVisible] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  const videoUrl = content.heroVideoUrl || null;
 
   useEffect(() => {
-    setIsMobile(
-      window.innerWidth < 768 ||
-      "ontouchstart" in window ||
-      navigator.maxTouchPoints > 0
-    );
-    // Stagger content appearance
-    const timer = setTimeout(() => setContentVisible(true), 200);
-    return () => clearTimeout(timer);
+    // 3s fallback — show content on dark bg if video too slow
+    const fallback = setTimeout(() => setReady(true), 3000);
+    return () => clearTimeout(fallback);
   }, []);
 
   const scrollToPortfolio = () => {
     document.querySelector("#portfolio")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // MP4 Firebase autoplay works on mobile with muted + playsInline
-  const videoUrl = content.heroVideoUrl || null;
-
   return (
-    <section className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden bg-[#2A1E1B]">
+    <section className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden bg-[#1A1210]">
       {/* ── Background ── */}
       <div className="absolute inset-0">
-        {/* Video (desktop only) */}
         {videoUrl && (
           <video
             src={videoUrl}
@@ -58,47 +47,21 @@ export default function Hero({ content, socials, heroImageUrl }: HeroProps) {
             loop
             playsInline
             preload="auto"
-            onCanPlay={() => setMediaReady(true)}
+            onCanPlay={() => setReady(true)}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
-              mediaReady ? "opacity-100" : "opacity-0"
+              ready ? "opacity-100" : "opacity-0"
             }`}
           />
         )}
 
-        {/* Image fallback */}
-        {(!videoUrl || !mediaReady) && heroImageUrl && (
-          <Image
-            src={heroImageUrl}
-            alt="Hero background"
-            fill
-            priority
-            className={`object-cover transition-opacity duration-[800ms] ease-out ${
-              (!videoUrl || !mediaReady) ? "opacity-100" : "opacity-0"
-            }`}
-            onLoad={() => { if (!videoUrl) setMediaReady(true); }}
-          />
-        )}
-
-        {/* Placeholder if nothing */}
-        {!videoUrl && !heroImageUrl && (
-          <Image
-            src="/images/placeholders/hero.svg"
-            alt="Hero background"
-            fill
-            priority
-            className="object-cover"
-            onLoad={() => setMediaReady(true)}
-          />
-        )}
-
-        {/* Overlays — pure CSS, no dynamic colors */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/60" />
-        <div className="absolute inset-0 bg-black/10" />
+        {/* Overlays */}
+        <div className={`absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/60 transition-opacity duration-[800ms] ease-out ${ready ? "opacity-100" : "opacity-0"}`} />
+        <div className={`absolute inset-0 bg-black/10 transition-opacity duration-[800ms] ease-out ${ready ? "opacity-100" : "opacity-0"}`} />
       </div>
 
       {/* ── Content ── */}
       <div className={`relative z-10 text-center px-6 max-w-5xl mx-auto transition-all duration-700 ease-out ${
-        contentVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+        ready ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
       }`}>
         <p className="font-sans text-xs text-white/50 uppercase tracking-[0.5em] mb-6 font-light">
           {lang === "fr" ? "Créatrice de contenu voyage" : "Travel content creator"}
@@ -168,7 +131,7 @@ export default function Hero({ content, socials, heroImageUrl }: HeroProps) {
       <button
         onClick={scrollToPortfolio}
         className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/50 hover:text-white/80 transition-all duration-700 ${
-          contentVisible ? "opacity-100" : "opacity-0"
+          ready ? "opacity-100" : "opacity-0"
         }`}
       >
         <span className="font-sans text-xs tracking-widest uppercase">
