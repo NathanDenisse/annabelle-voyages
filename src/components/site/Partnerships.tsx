@@ -50,10 +50,7 @@ function buildPartnershipGallery(item: Partnership): MediaItem[] {
 // ─── Card ───
 function PartnershipCard({ item, onClick }: { item: Partnership; onClick: () => void }) {
   const { lang } = useLanguage();
-  const cardRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
-  const [inViewport, setInViewport] = useState(false);
 
   // Determine cover from gallery or legacy fields
   const hasGallery = item.gallery && item.gallery.length > 0;
@@ -84,29 +81,11 @@ function PartnershipCard({ item, onClick }: { item: Partnership; onClick: () => 
     return item.logoUrl || null;
   })();
 
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setInViewport(entry.isIntersecting);
-        if (isMp4Cover && videoRef.current) {
-          if (entry.isIntersecting) videoRef.current.play().catch(() => {});
-          else videoRef.current.pause();
-        }
-      },
-      { threshold: 0.8 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [isMp4Cover]);
-
   const aspectClass = format === "short" ? "aspect-[9/16]" : "aspect-[16/9]";
   const mediaCount = item.gallery?.length ?? ((item.images?.length ?? 0) + (item.videoUrl || item.mp4VideoUrl ? 1 : 0));
 
   return (
     <div
-      ref={cardRef}
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden border border-white/10 hover:border-terracotta-500/40 cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
@@ -119,14 +98,16 @@ function PartnershipCard({ item, onClick }: { item: Partnership; onClick: () => 
         <div className="absolute inset-0 bg-gradient-to-br from-[#4A3230] to-[#2A1815]" />
       )}
 
+      {/* MP4: autoPlay always — no IntersectionObserver */}
       {isMp4Cover && mp4Src && (
-        <video ref={videoRef} src={mp4Src} muted loop playsInline preload="auto"
+        <video src={mp4Src} autoPlay muted loop playsInline preload="auto"
           onCanPlay={() => setVideoLoaded(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
         />
       )}
 
-      {embedUrl && !isMp4Cover && inViewport && (
+      {/* YouTube: always rendered — no inViewport gate */}
+      {embedUrl && !isMp4Cover && (
         <iframe src={embedUrl} title={`${item.name} video`} allow="autoplay; encrypted-media"
           onLoad={() => setVideoLoaded(true)}
           style={{ pointerEvents: "none" }}

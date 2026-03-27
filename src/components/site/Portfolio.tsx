@@ -75,16 +75,12 @@ function MediaCard({
   format: CardFormat;
   onClick: () => void;
 }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
-  const [inViewport, setInViewport] = useState(false);
 
   const isMp4 = !!item.mp4VideoUrl && !item.gallery?.length;
   const hasGallery = item.gallery && item.gallery.length > 0;
   const thumbnail = getCardThumbnail(item);
 
-  // Cover video: only play if no gallery overrides it
   const firstMedia = hasGallery ? item.gallery![0] : null;
   const coverIsVideo = firstMedia?.type === "video";
   const coverVideoId = coverIsVideo && firstMedia?.platform === "youtube"
@@ -96,23 +92,6 @@ function MediaCard({
       ? (() => { const id = getYouTubeId(item.videoUrl!); return id ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1` : null; })()
       : null;
 
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setInViewport(entry.isIntersecting);
-        if (isMp4 && videoRef.current) {
-          if (entry.isIntersecting) videoRef.current.play().catch(() => {});
-          else videoRef.current.pause();
-        }
-      },
-      { threshold: 0.8 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [isMp4]);
-
   const aspectClass =
     format === "short" ? "aspect-[9/16]"
     : format === "landscape" ? "aspect-[16/9]"
@@ -122,7 +101,6 @@ function MediaCard({
 
   return (
     <div
-      ref={cardRef}
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
@@ -136,17 +114,18 @@ function MediaCard({
         />
       )}
 
+      {/* MP4: autoPlay always — no IntersectionObserver */}
       {isMp4 && (
         <video
-          ref={videoRef}
           src={item.mp4VideoUrl}
-          muted loop playsInline preload="auto"
+          autoPlay muted loop playsInline preload="auto"
           onCanPlay={() => setVideoLoaded(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
         />
       )}
 
-      {embedUrl && inViewport && (
+      {/* YouTube: always rendered — no inViewport gate */}
+      {embedUrl && (
         <iframe
           src={embedUrl}
           title={t(item.title, lang)}
