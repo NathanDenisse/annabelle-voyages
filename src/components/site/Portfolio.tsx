@@ -4,8 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { MapPin } from "lucide-react";
-import useEmblaCarousel from "embla-carousel-react";
-import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t, filterLabels } from "@/lib/i18n";
 import { PortfolioItem, MediaCategory, MediaItem, SiteContent, CATEGORY_LABELS } from "@/types";
@@ -172,30 +170,14 @@ export default function Portfolio({ items, content }: PortfolioProps) {
   const isDesktop = useBreakpoint();
   const [activeCategory, setActiveCategory] = useState<MediaCategory | "all">("all");
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
+  const [scrollPaused, setScrollPaused] = useState(false);
   const headerRef = useRef(null);
   const isInView = useInView(headerRef, { once: true, margin: "-80px" });
-
-  // Stable plugin reference — must not be recreated on re-renders
-  const autoScrollPlugin = useRef(AutoScroll({
-    speed: 1.2,
-    stopOnInteraction: false,
-    stopOnMouseEnter: false,
-    startDelay: 0,
-  })).current;
-
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    { loop: true, align: "start", dragFree: true, active: !isDesktop },
-    [autoScrollPlugin]
-  );
 
   const visibleItems = items.filter((item) => item.visible);
   const filtered = activeCategory === "all"
     ? visibleItems
     : visibleItems.filter((item) => item.category === activeCategory);
-
-  useEffect(() => {
-    if (emblaApi) emblaApi.reInit();
-  }, [activeCategory, emblaApi, isDesktop]);
 
   const selectedGallery = selectedItem ? buildGallery(selectedItem) : [];
 
@@ -231,13 +213,20 @@ export default function Portfolio({ items, content }: PortfolioProps) {
             </div>
           </div>
         ) : (
-          /* ─── Mobile: Embla auto-scroll ─── */
-          <div className="overflow-hidden" ref={emblaRef}>
-            <div className="flex">
-              {filtered.map((item) => {
+          /* ─── Mobile: CSS infinite scroll ─── */
+          <div
+            className="overflow-hidden"
+            onTouchStart={() => setScrollPaused(true)}
+            onTouchEnd={() => setScrollPaused(false)}
+          >
+            <div
+              key={activeCategory}
+              className={`carousel-track${scrollPaused ? " paused" : ""}`}
+            >
+              {[...filtered, ...filtered].map((item, idx) => {
                 const format = getCardFormat(item);
                 return (
-                  <div key={item.id} className={`flex-none px-1.5 ${format === "short" ? "w-[62%]" : "w-[84%]"}`}>
+                  <div key={`${item.id}-${idx}`} className={`flex-none px-1.5 ${format === "short" ? "w-[62vw]" : "w-[84vw]"}`}>
                     <MediaCard item={item} lang={lang} format={format} onClick={() => setSelectedItem(item)} />
                   </div>
                 );

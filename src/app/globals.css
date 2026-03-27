@@ -20,6 +20,20 @@
   to { opacity: 1; }
 }
 
+/* ── Infinite carousel scroll (CSS GPU) ── */
+@keyframes carousel-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.carousel-track {
+  display: flex;
+  will-change: transform;
+  animation: carousel-scroll 35s linear infinite;
+}
+.carousel-track.paused {
+  animation-play-state: paused;
+}
+
 html {
   scroll-behavior: smooth;
 }

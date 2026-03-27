@@ -1,9 +1,7 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useInView } from "framer-motion";
-import useEmblaCarousel from "embla-carousel-react";
-import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
 import { Testimonial } from "@/types";
@@ -38,18 +36,7 @@ export default function Testimonials({ items }: TestimonialsProps) {
   const { lang } = useLanguage();
   const headerRef = useRef(null);
   const isInView = useInView(headerRef, { once: true, margin: "-80px" });
-
-  const autoScrollPlugin = useRef(AutoScroll({
-    speed: 0.9,
-    stopOnInteraction: false,
-    stopOnMouseEnter: false,
-    startDelay: 0,
-  })).current;
-
-  const [emblaRef] = useEmblaCarousel(
-    { loop: true, align: "start", dragFree: true },
-    [autoScrollPlugin]
-  );
+  const [scrollPaused, setScrollPaused] = useState(false);
 
   const visible = items.filter((item) => item.visible);
   if (visible.length === 0) return null;
@@ -77,11 +64,15 @@ export default function Testimonials({ items }: TestimonialsProps) {
         <div className={`w-16 h-px bg-terracotta-400 mx-auto mt-4 transition-all duration-700 delay-300 ${isInView ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`} />
       </div>
 
-      {/* Carousel */}
-      <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex items-stretch">
-          {visible.map((item) => (
-            <div key={item.id} className="flex-none w-[85%] sm:w-[46%] lg:w-[32%] px-2.5">
+      {/* Carousel CSS natif — tapis roulant GPU */}
+      <div
+        className="overflow-hidden"
+        onTouchStart={() => setScrollPaused(true)}
+        onTouchEnd={() => setScrollPaused(false)}
+      >
+        <div className={`carousel-track${scrollPaused ? " paused" : ""}`}>
+          {[...visible, ...visible].map((item, idx) => (
+            <div key={`${item.id}-${idx}`} className="flex-none w-[85vw] sm:w-[46vw] lg:w-[32vw] px-2.5">
               <TestimonialCard item={item} lang={lang} />
             </div>
           ))}

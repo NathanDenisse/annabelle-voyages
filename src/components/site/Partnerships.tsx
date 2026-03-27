@@ -3,8 +3,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import useEmblaCarousel from "embla-carousel-react";
-import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
 import { Partnership, SiteContent, MediaItem } from "@/types";
@@ -143,25 +141,9 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [selectedPartnership, setSelectedPartnership] = useState<Partnership | null>(null);
-
-  // Stable plugin reference — must not be recreated on re-renders
-  const autoScrollPlugin = useRef(AutoScroll({
-    speed: 1.2,
-    stopOnInteraction: false,
-    stopOnMouseEnter: false,
-    startDelay: 0,
-  })).current;
-
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    { loop: true, align: "start", dragFree: true, active: !isDesktop },
-    [autoScrollPlugin]
-  );
+  const [scrollPaused, setScrollPaused] = useState(false);
 
   const visible = items.filter((item) => item.visible !== false);
-
-  useEffect(() => {
-    if (emblaApi) emblaApi.reInit();
-  }, [emblaApi, isDesktop]);
 
   if (visible.length === 0) return null;
 
@@ -196,13 +178,17 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
             </div>
           </div>
         ) : (
-          /* ─── Mobile: Embla auto-scroll ─── */
-          <div className="overflow-hidden" ref={emblaRef}>
-            <div className="flex">
-              {visible.map((item) => {
+          /* ─── Mobile: CSS infinite scroll ─── */
+          <div
+            className="overflow-hidden"
+            onTouchStart={() => setScrollPaused(true)}
+            onTouchEnd={() => setScrollPaused(false)}
+          >
+            <div className={`carousel-track${scrollPaused ? " paused" : ""}`}>
+              {[...visible, ...visible].map((item, idx) => {
                 const format = item.mp4VideoUrl ? "landscape" : getVideoFormat(item.videoUrl);
                 return (
-                  <div key={item.id} className={`flex-none px-1.5 ${format === "short" ? "w-[62%]" : "w-[84%]"}`}>
+                  <div key={`${item.id}-${idx}`} className={`flex-none px-1.5 ${format === "short" ? "w-[62vw]" : "w-[84vw]"}`}>
                     <PartnershipCard item={item} onClick={() => setSelectedPartnership(item)} />
                   </div>
                 );
