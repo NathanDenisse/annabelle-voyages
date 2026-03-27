@@ -77,7 +77,7 @@ export default function SmartBilingualField({
       } else {
         setTranslateStatusEn("idle");
       }
-    }, 1000);
+    }, 1500);
   };
 
   // EN → FR auto-translate
@@ -101,7 +101,7 @@ export default function SmartBilingualField({
       } else {
         setTranslateStatusFr("idle");
       }
-    }, 1000);
+    }, 1500);
   };
 
   const fetchSuggestions = async (lang: "fr" | "en") => {

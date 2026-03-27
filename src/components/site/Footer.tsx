@@ -32,7 +32,7 @@ export default function Footer({ content, socials }: FooterProps) {
               Annabelle
             </h3>
             <p className="font-sans font-light text-xs text-white/40 tracking-[0.5em] uppercase mt-1">
-              Voyages
+              {lang === "fr" ? "Voyages" : "Voyage"}
             </p>
           </div>
 

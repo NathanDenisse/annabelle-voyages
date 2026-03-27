@@ -2,7 +2,7 @@ import { Language, LocalizedText } from "@/types";
 
 export function t(text: LocalizedText | undefined, lang: Language): string {
   if (!text) return "";
-  return text[lang] || text.fr || "";
+  return text[lang] || text.en || text.fr || "";
 }
 
 export const defaultContent = {
@@ -40,7 +40,7 @@ export const defaultContent = {
   },
   footerText: {
     fr: "© Annabelle Voyages 2026",
-    en: "© Annabelle Voyages 2026",
+    en: "© Annabelle Voyage 2026",
   },
 };
 

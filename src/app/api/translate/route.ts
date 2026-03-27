@@ -12,8 +12,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "API key not configured" }, { status: 500 });
     }
 
+    const isFrToEn = from === "fr" && to === "en";
     const fromLabel = from === "fr" ? "français" : "anglais";
     const toLabel = to === "fr" ? "français" : "anglais";
+
+    const prompt = isFrToEn
+      ? `Traduis ce texte du français vers l'anglais. C'est pour le site d'une créatrice de contenu voyage. Garde un ton authentique et inspirant. Réponds uniquement avec la traduction, rien d'autre.\n\nTexte : ${text}`
+      : `Traduis ce texte du ${fromLabel} vers le ${toLabel}. Réponds uniquement avec la traduction, rien d'autre.\n\nTexte : ${text}`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -28,7 +33,7 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: "user",
-            content: `Traduis ce texte du ${fromLabel} vers le ${toLabel}. Réponds uniquement avec la traduction, sans guillemets, sans explication.\n\nTexte : ${text}`,
+            content: prompt,
           },
         ],
       }),

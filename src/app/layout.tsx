@@ -3,22 +3,22 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  title: "Annabelle Voyages — Créatrice de contenu voyage",
+  title: "Annabelle Voyage — Travel Content Creator",
   description:
-    "Française à Dublin, créatrice de contenu voyage. Partenariats hôtels et marques lifestyle.",
-  keywords: ["voyage", "travel", "content creator", "Dublin", "photo", "vidéo", "drone"],
+    "French in Dublin, travel content creator. Hotel and lifestyle brand partnerships.",
+  keywords: ["voyage", "travel", "content creator", "Dublin", "photo", "video", "drone"],
   authors: [{ name: "Annabelle Cathala" }],
   openGraph: {
-    title: "Annabelle Voyages",
-    description: "Française à Dublin · Créatrice de contenu voyage",
+    title: "Annabelle Voyage",
+    description: "French in Dublin · Travel Content Creator",
     type: "website",
-    locale: "fr_FR",
-    siteName: "Annabelle Voyages",
+    locale: "en_US",
+    siteName: "Annabelle Voyage",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Annabelle Voyages",
-    description: "Française à Dublin · Créatrice de contenu voyage",
+    title: "Annabelle Voyage",
+    description: "French in Dublin · Travel Content Creator",
   },
 };
 
@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
+    <html lang="en">
       <head>
         <link rel="icon" href="/favicon.ico" />
         {/* Preconnect to Google Fonts for fast loading */}

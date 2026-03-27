@@ -6,14 +6,14 @@ import { Language } from "@/types";
 export const LanguageContext = createContext<{
   lang: Language;
   setLang: (l: Language) => void;
-}>({ lang: "fr", setLang: () => {} });
+}>({ lang: "en", setLang: () => {} });
 
 export function useLanguage() {
   return useContext(LanguageContext);
 }
 
 export function useLanguageState() {
-  const [lang, setLangState] = useState<Language>("fr");
+  const [lang, setLangState] = useState<Language>("en");
 
   useEffect(() => {
     const stored = localStorage.getItem("av_lang") as Language | null;
