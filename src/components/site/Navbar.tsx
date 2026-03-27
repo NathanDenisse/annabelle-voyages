@@ -35,7 +35,7 @@ export default function Navbar() {
             >
               <span className="block font-serif italic font-normal text-xl md:text-2xl leading-none">Annabelle</span>
               <span className="block font-sans font-light text-[9px] tracking-[0.4em] uppercase mt-0.5 text-white/50">
-                {lang === "fr" ? "Voyages" : "Voyage"}
+                Voyage
               </span>
             </button>
 

@@ -39,7 +39,7 @@ export const defaultContent = {
     en: "Are you a hotel or brand looking to collaborate? Get in touch!",
   },
   footerText: {
-    fr: "© Annabelle Voyages 2026",
+    fr: "© Annabelle Voyage 2026",
     en: "© Annabelle Voyage 2026",
   },
 };

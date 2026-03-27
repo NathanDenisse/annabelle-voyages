@@ -113,7 +113,7 @@ export default function Hero({ content, socials, heroImageUrl }: HeroProps) {
         <p
           className="font-sans font-light text-sm sm:text-base md:text-xl text-white/80 tracking-[0.55em] uppercase mb-10"
         >
-          {lang === "fr" ? "Voyages" : "Voyage"}
+          Voyage
         </p>
 
         <p className="font-sans text-base sm:text-lg text-white/75 font-light tracking-widest mb-10">
