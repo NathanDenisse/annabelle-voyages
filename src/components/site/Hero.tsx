@@ -27,8 +27,10 @@ export default function Hero({ content, socials }: HeroProps) {
   const videoUrl = content.heroVideoUrl || null;
 
   // ── Autoplay fiable Safari iOS ──
-  // Safari bloque parfois l'autoplay selon l'état réseau, Low Power Mode, ou retour d'onglet.
-  // Stratégie : plusieurs tentatives échelonnées + écoute des événements de reprise.
+  // Ne jamais appeler video.load() — cela remet la vidéo en état vierge et Safari
+  // bloque le play() suivant sans geste utilisateur. À la place, on laisse React
+  // mettre à jour l'attribut src via la prop JSX (comportement natif du browser),
+  // et on appelle play() en backup.
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !videoUrl) return;
@@ -38,18 +40,11 @@ export default function Hero({ content, socials }: HeroProps) {
       video.play().catch(() => {});
     };
 
-    // Charger la source si nécessaire
-    if (video.src !== videoUrl) {
-      video.src = videoUrl;
-      video.load();
-    }
-
     // Tentative immédiate
     tryPlay();
-
-    // Retry 500ms — Safari a parfois besoin d'un délai après load()
+    // Retry 500ms
     const t1 = setTimeout(tryPlay, 500);
-    // Retry 1.5s — dernier recours avant fallback fond sombre
+    // Retry 1.5s
     const t2 = setTimeout(tryPlay, 1500);
 
     // Retour d'onglet ou déverrouillage écran
@@ -58,7 +53,7 @@ export default function Hero({ content, socials }: HeroProps) {
     };
     document.addEventListener("visibilitychange", onVisibility);
 
-    // Premier touch — Safari autorise le play après interaction utilisateur
+    // Premier touch (Low Power Mode : dernier recours)
     const onTouch = () => {
       tryPlay();
       document.removeEventListener("touchstart", onTouch);
@@ -81,10 +76,12 @@ export default function Hero({ content, socials }: HeroProps) {
     <section className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden bg-[#1A1210]">
       {/* ── Background ── */}
       <div className="absolute inset-0">
-        {/* Toujours dans le DOM — src géré via useEffect pour Safari iOS */}
+        {/* src via prop React — le browser applique sa politique autoplay native (plus permissive
+            que load() programmatique). Toujours dans le DOM pour Safari iOS. */}
         <video
           ref={videoRef}
           id="hero-video"
+          src={videoUrl || undefined}
           autoPlay
           muted
           loop
