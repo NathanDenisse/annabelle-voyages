@@ -29,6 +29,7 @@ import {
 } from "@/lib/firestore";
 import { PortfolioItem, MediaCategory, CATEGORY_LABELS } from "@/types";
 import { getYouTubeThumbnail, deleteFileByUrl, uploadVideo } from "@/lib/storage";
+import SmartBilingualField from "@/components/admin/SmartBilingualField";
 import MediaUploader from "@/components/admin/MediaUploader";
 import SortableItem from "@/components/admin/SortableItem";
 import toast from "react-hot-toast";
@@ -323,26 +324,14 @@ export default function PortfolioAdmin() {
               </div>
 
               {/* Title */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-sans text-xs font-medium text-brown-600 mb-1">Titre (FR) *</label>
-                  <input
-                    value={form.title.fr}
-                    onChange={(e) => setForm({ ...form, title: { ...form.title, fr: e.target.value } })}
-                    className="w-full bg-cream-100 border border-blush-200 rounded-xl px-3 py-2.5 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors"
-                    placeholder="Titre en français"
-                  />
-                </div>
-                <div>
-                  <label className="block font-sans text-xs font-medium text-brown-600 mb-1">Title (EN)</label>
-                  <input
-                    value={form.title.en}
-                    onChange={(e) => setForm({ ...form, title: { ...form.title, en: e.target.value } })}
-                    className="w-full bg-cream-100 border border-blush-200 rounded-xl px-3 py-2.5 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors"
-                    placeholder="Title in English"
-                  />
-                </div>
-              </div>
+              <SmartBilingualField
+                label="Titre"
+                valueFr={form.title.fr}
+                valueEn={form.title.en}
+                onChangeFr={(v) => setForm({ ...form, title: { ...form.title, fr: v } })}
+                onChangeEn={(v) => setForm({ ...form, title: { ...form.title, en: v } })}
+                context={{ location: form.location, category: form.category, type: "portfolio" }}
+              />
 
               {/* Location + Category */}
               <div className="grid grid-cols-2 gap-3">
@@ -372,28 +361,15 @@ export default function PortfolioAdmin() {
               </div>
 
               {/* Description */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-sans text-xs font-medium text-brown-600 mb-1">Description (FR)</label>
-                  <textarea
-                    value={form.description.fr}
-                    onChange={(e) => setForm({ ...form, description: { ...form.description, fr: e.target.value } })}
-                    rows={3}
-                    className="w-full bg-cream-100 border border-blush-200 rounded-xl px-3 py-2.5 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors resize-none"
-                    placeholder="Description..."
-                  />
-                </div>
-                <div>
-                  <label className="block font-sans text-xs font-medium text-brown-600 mb-1">Description (EN)</label>
-                  <textarea
-                    value={form.description.en}
-                    onChange={(e) => setForm({ ...form, description: { ...form.description, en: e.target.value } })}
-                    rows={3}
-                    className="w-full bg-cream-100 border border-blush-200 rounded-xl px-3 py-2.5 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors resize-none"
-                    placeholder="Description..."
-                  />
-                </div>
-              </div>
+              <SmartBilingualField
+                label="Description"
+                valueFr={form.description.fr}
+                valueEn={form.description.en}
+                onChangeFr={(v) => setForm({ ...form, description: { ...form.description, fr: v } })}
+                onChangeEn={(v) => setForm({ ...form, description: { ...form.description, en: v } })}
+                multiline
+                context={{ title: form.title.fr, location: form.location, category: form.category, type: "portfolio" }}
+              />
 
               {/* Visible toggle */}
               <div className="flex items-center gap-3">

@@ -29,6 +29,7 @@ import {
 } from "@/lib/firestore";
 import { Partnership } from "@/types";
 import { uploadSingleImage, uploadVideo, deleteFileByUrl } from "@/lib/storage";
+import SmartBilingualField from "@/components/admin/SmartBilingualField";
 import SortableItem from "@/components/admin/SortableItem";
 import toast from "react-hot-toast";
 
@@ -354,8 +355,7 @@ export default function PartnershipsAdmin() {
                   ref={fileRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
-                  className="hidden"
+                                    className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) handleLogoUpload(f);
@@ -389,8 +389,7 @@ export default function PartnershipsAdmin() {
                   ref={imagesFileRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
-                  multiple
+                                    multiple
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files;
@@ -470,8 +469,7 @@ export default function PartnershipsAdmin() {
                       ref={mp4FileRef}
                       type="file"
                       accept="video/*"
-                      capture="environment"
-                      className="hidden"
+                                            className="hidden"
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f) handleMp4Upload(f);
@@ -528,28 +526,15 @@ export default function PartnershipsAdmin() {
               </div>
 
               {/* Description */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-sans text-xs font-medium text-brown-600 mb-1">Description (FR)</label>
-                  <textarea
-                    value={form.description.fr}
-                    onChange={(e) => setForm({ ...form, description: { ...form.description, fr: e.target.value } })}
-                    rows={3}
-                    className="w-full bg-cream-100 border border-blush-200 rounded-xl px-3 py-2.5 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors resize-none"
-                    placeholder="Description..."
-                  />
-                </div>
-                <div>
-                  <label className="block font-sans text-xs font-medium text-brown-600 mb-1">Description (EN)</label>
-                  <textarea
-                    value={form.description.en}
-                    onChange={(e) => setForm({ ...form, description: { ...form.description, en: e.target.value } })}
-                    rows={3}
-                    className="w-full bg-cream-100 border border-blush-200 rounded-xl px-3 py-2.5 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors resize-none"
-                    placeholder="Description..."
-                  />
-                </div>
-              </div>
+              <SmartBilingualField
+                label="Description"
+                valueFr={form.description.fr}
+                valueEn={form.description.en}
+                onChangeFr={(v) => setForm({ ...form, description: { ...form.description, fr: v } })}
+                onChangeEn={(v) => setForm({ ...form, description: { ...form.description, en: v } })}
+                multiline
+                context={{ name: form.name, type: "partenariat" }}
+              />
 
               {/* Link */}
               <div>

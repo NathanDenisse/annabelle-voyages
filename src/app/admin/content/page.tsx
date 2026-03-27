@@ -10,6 +10,7 @@ import { updateSiteContent } from "@/lib/firestore";
 import { uploadSingleImage } from "@/lib/storage";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveIndicator from "@/components/admin/SaveIndicator";
+import SmartBilingualField from "@/components/admin/SmartBilingualField";
 import { SiteContent } from "@/types";
 import toast from "react-hot-toast";
 
@@ -72,14 +73,14 @@ export default function ContentAdmin() {
       <div className="space-y-4">
         {/* Hero Section */}
         <Section title="Hero">
-          <BilingualField
+          <SmartBilingualField
             label="Tagline"
             valueFr={form.heroTagline.fr}
             valueEn={form.heroTagline.en}
             onChangeFr={(v) => setForm({ ...form, heroTagline: { ...form.heroTagline, fr: v } })}
             onChangeEn={(v) => setForm({ ...form, heroTagline: { ...form.heroTagline, en: v } })}
           />
-          <BilingualField
+          <SmartBilingualField
             label="Bouton CTA"
             valueFr={form.heroCta.fr}
             valueEn={form.heroCta.en}
@@ -98,8 +99,7 @@ export default function ContentAdmin() {
               ref={aboutFileRef}
               type="file"
               accept="image/*"
-              capture="environment"
-              className="hidden"
+                            className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) handleAboutImageUpload(f);
@@ -127,7 +127,7 @@ export default function ContentAdmin() {
             </div>
           </div>
 
-          <BilingualField
+          <SmartBilingualField
             label="Bio"
             valueFr={form.aboutBio.fr}
             valueEn={form.aboutBio.en}
@@ -162,14 +162,14 @@ export default function ContentAdmin() {
 
         {/* Contact Section */}
         <Section title="Contact">
-          <BilingualField
+          <SmartBilingualField
             label="Titre contact"
             valueFr={form.contactTitle.fr}
             valueEn={form.contactTitle.en}
             onChangeFr={(v) => setForm({ ...form, contactTitle: { ...form.contactTitle, fr: v } })}
             onChangeEn={(v) => setForm({ ...form, contactTitle: { ...form.contactTitle, en: v } })}
           />
-          <BilingualField
+          <SmartBilingualField
             label="Sous-titre contact"
             valueFr={form.contactSubtitle.fr}
             valueEn={form.contactSubtitle.en}
@@ -205,57 +205,3 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function BilingualField({
-  label,
-  valueFr,
-  valueEn,
-  onChangeFr,
-  onChangeEn,
-  multiline = false,
-}: {
-  label: string;
-  valueFr: string;
-  valueEn: string;
-  onChangeFr: (v: string) => void;
-  onChangeEn: (v: string) => void;
-  multiline?: boolean;
-}) {
-  const inputClass =
-    "w-full bg-cream-100 border border-blush-200 rounded-xl px-4 py-3 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors";
-
-  return (
-    <div>
-      <label className="block font-sans text-xs font-medium text-brown-500 uppercase tracking-wide mb-2">
-        {label}
-      </label>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <p className="font-sans text-xs text-brown-400 mb-1">Français</p>
-          {multiline ? (
-            <textarea
-              value={valueFr}
-              onChange={(e) => onChangeFr(e.target.value)}
-              rows={4}
-              className={`${inputClass} resize-none`}
-            />
-          ) : (
-            <input type="text" value={valueFr} onChange={(e) => onChangeFr(e.target.value)} className={inputClass} />
-          )}
-        </div>
-        <div>
-          <p className="font-sans text-xs text-brown-400 mb-1">English</p>
-          {multiline ? (
-            <textarea
-              value={valueEn}
-              onChange={(e) => onChangeEn(e.target.value)}
-              rows={4}
-              className={`${inputClass} resize-none`}
-            />
-          ) : (
-            <input type="text" value={valueEn} onChange={(e) => onChangeEn(e.target.value)} className={inputClass} />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}

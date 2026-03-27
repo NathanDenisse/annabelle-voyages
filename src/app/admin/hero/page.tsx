@@ -109,8 +109,7 @@ export default function HeroAdmin() {
             ref={videoRef}
             type="file"
             accept="video/*"
-            capture="environment"
-            className="hidden"
+                        className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) handleVideoUpload(f);
@@ -185,8 +184,7 @@ export default function HeroAdmin() {
             ref={fileRef}
             type="file"
             accept="image/*"
-            capture="environment"
-            className="hidden"
+                        className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) handleImageUpload(f);
