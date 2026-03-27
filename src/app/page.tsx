@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSiteContent, useSocialLinks, usePortfolio, usePartnerships, useTestimonials } from "@/hooks/useFirestore";
 import { useLanguageState, LanguageContext } from "@/hooks/useLanguage";
 import Navbar from "@/components/site/Navbar";
@@ -21,13 +21,19 @@ export default function Home() {
   const { items: portfolioItems } = usePortfolio();
   const { items: partnerships } = usePartnerships();
   const { items: testimonials } = useTestimonials();
+
+  // Page visible après 500ms — indépendant de la vidéo et de Firestore
   const [pageReady, setPageReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setPageReady(true), 500);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <LanguageContext.Provider value={{ lang, setLang }}>
-      <main className={`transition-opacity duration-[800ms] ease-out ${pageReady ? "opacity-100" : "opacity-0"}`}>
+      <main className={`transition-opacity duration-[600ms] ease-out ${pageReady ? "opacity-100" : "opacity-0"}`}>
         <Navbar />
-        <Hero content={content} socials={socials} onReady={() => setPageReady(true)} />
+        <Hero content={content} socials={socials} />
         <About content={content} aboutImageUrl={content.aboutImageUrl} socials={socials} />
         <Portfolio items={portfolioItems} content={content} />
         <Partnerships items={partnerships} content={content} />

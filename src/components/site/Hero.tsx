@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Instagram, Youtube, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
@@ -9,7 +9,6 @@ import { SiteContent, SocialLinks } from "@/types";
 interface HeroProps {
   content: SiteContent;
   socials: SocialLinks;
-  onReady?: () => void;
 }
 
 function TikTokIcon({ size = 20 }: { size?: number }) {
@@ -20,33 +19,20 @@ function TikTokIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export default function Hero({ content, socials, onReady }: HeroProps) {
+export default function Hero({ content, socials }: HeroProps) {
   const { lang } = useLanguage();
   const [videoReady, setVideoReady] = useState(false);
-  const firedRef = useRef(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   const videoUrl = content.heroVideoUrl || null;
 
-  const fireReady = useCallback(() => {
-    if (!firedRef.current) {
-      firedRef.current = true;
-      setVideoReady(true);
-      onReady?.();
+  // Callback ref — s'exécute au moment exact où l'élément <video> monte dans le DOM
+  // Crucial pour Safari iOS : force le play même quand videoUrl arrive async depuis Firestore
+  const videoCallbackRef = useCallback((node: HTMLVideoElement | null) => {
+    if (node) {
+      node.muted = true;
+      node.play().catch(() => {});
     }
-  }, [onReady]);
-
-  useEffect(() => {
-    // Force play on mobile (Safari iOS requires programmatic play after muted)
-    const video = videoRef.current;
-    if (video) {
-      video.muted = true;
-      video.play().catch(() => {});
-    }
-    // 2s fallback — déclenche le fade-in global si la vidéo tarde
-    const fallback = setTimeout(fireReady, 2000);
-    return () => clearTimeout(fallback);
-  }, [fireReady]);
+  }, []);
 
   const scrollToPortfolio = () => {
     document.querySelector("#portfolio")?.scrollIntoView({ behavior: "smooth" });
@@ -58,8 +44,7 @@ export default function Hero({ content, socials, onReady }: HeroProps) {
       <div className="absolute inset-0">
         {videoUrl && (
           <video
-            ref={videoRef}
-            id="hero-video"
+            ref={videoCallbackRef}
             src={videoUrl}
             autoPlay
             muted
@@ -67,7 +52,7 @@ export default function Hero({ content, socials, onReady }: HeroProps) {
             playsInline
             preload="auto"
             {...{ "webkit-playsinline": "true" }}
-            onCanPlay={fireReady}
+            onCanPlay={() => setVideoReady(true)}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
               videoReady ? "opacity-100" : "opacity-0"
             }`}
@@ -79,7 +64,7 @@ export default function Hero({ content, socials, onReady }: HeroProps) {
         <div className={`absolute inset-0 bg-black/10 transition-opacity duration-[800ms] ease-out ${videoReady ? "opacity-100" : "opacity-0"}`} />
       </div>
 
-      {/* ── Content — toujours visible, le fade-in global est géré par page.tsx ── */}
+      {/* ── Content ── */}
       <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
         <p className="font-sans text-xs text-white/50 uppercase tracking-[0.5em] mb-6 font-light">
           {lang === "fr" ? "Créatrice de contenu voyage" : "Travel content creator"}
@@ -91,9 +76,7 @@ export default function Hero({ content, socials, onReady }: HeroProps) {
         >
           Annabelle
         </h1>
-        <p
-          className="font-sans font-light text-sm sm:text-base md:text-xl text-white/80 tracking-[0.55em] uppercase mb-10"
-        >
+        <p className="font-sans font-light text-sm sm:text-base md:text-xl text-white/80 tracking-[0.55em] uppercase mb-10">
           Voyage
         </p>
 
@@ -110,35 +93,20 @@ export default function Hero({ content, socials, onReady }: HeroProps) {
 
         <div className="flex items-center justify-center gap-6 mt-10">
           {socials.instagram && (
-            <a
-              href={socials.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/60 hover:text-white active:text-white/90 transition-colors p-1"
-              aria-label="Instagram"
-            >
+            <a href={socials.instagram} target="_blank" rel="noopener noreferrer"
+              className="text-white/60 hover:text-white active:text-white/90 transition-colors p-1" aria-label="Instagram">
               <Instagram size={20} />
             </a>
           )}
           {socials.youtube && (
-            <a
-              href={socials.youtube}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/60 hover:text-white active:text-white/90 transition-colors p-1"
-              aria-label="YouTube"
-            >
+            <a href={socials.youtube} target="_blank" rel="noopener noreferrer"
+              className="text-white/60 hover:text-white active:text-white/90 transition-colors p-1" aria-label="YouTube">
               <Youtube size={20} />
             </a>
           )}
           {socials.tiktok && (
-            <a
-              href={socials.tiktok}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/60 hover:text-white active:text-white/90 transition-colors p-1"
-              aria-label="TikTok"
-            >
+            <a href={socials.tiktok} target="_blank" rel="noopener noreferrer"
+              className="text-white/60 hover:text-white active:text-white/90 transition-colors p-1" aria-label="TikTok">
               <TikTokIcon size={18} />
             </a>
           )}
