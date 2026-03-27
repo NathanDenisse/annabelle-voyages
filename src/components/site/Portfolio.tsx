@@ -7,6 +7,7 @@ import { MapPin } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useCarouselInertia } from "@/hooks/useCarouselInertia";
 import { t, filterLabels } from "@/lib/i18n";
 import { PortfolioItem, MediaCategory, MediaItem, SiteContent, CATEGORY_LABELS } from "@/types";
 import {
@@ -177,8 +178,9 @@ export default function Portfolio({ items, content }: PortfolioProps) {
 
   const autoScrollPlugin = AutoScroll({
     speed: 1.2,
-    stopOnInteraction: false,
+    stopOnInteraction: true,
     stopOnMouseEnter: false,
+    startDelay: 0,
   });
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
@@ -195,20 +197,7 @@ export default function Portfolio({ items, content }: PortfolioProps) {
     if (emblaApi) emblaApi.reInit();
   }, [activeCategory, emblaApi, isDesktop]);
 
-  useEffect(() => {
-    if (!emblaApi) return;
-    let resumeTimer: ReturnType<typeof setTimeout>;
-    const handlePointerUp = () => {
-      clearTimeout(resumeTimer);
-      resumeTimer = setTimeout(() => autoScrollPlugin.play(), 3000);
-    };
-    emblaApi.on("pointerUp", handlePointerUp);
-    return () => {
-      emblaApi.off("pointerUp", handlePointerUp);
-      clearTimeout(resumeTimer);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [emblaApi]);
+  useCarouselInertia(emblaApi, autoScrollPlugin, 1.2);
 
   const selectedGallery = selectedItem ? buildGallery(selectedItem) : [];
 

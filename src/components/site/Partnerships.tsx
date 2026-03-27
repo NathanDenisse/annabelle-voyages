@@ -6,6 +6,7 @@ import Image from "next/image";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useCarouselInertia } from "@/hooks/useCarouselInertia";
 import { t } from "@/lib/i18n";
 import { Partnership, SiteContent, MediaItem } from "@/types";
 import { getYouTubeId, detectVideoSource } from "@/lib/storage";
@@ -146,8 +147,9 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
 
   const autoScrollPlugin = AutoScroll({
     speed: 1.2,
-    stopOnInteraction: false,
+    stopOnInteraction: true,
     stopOnMouseEnter: false,
+    startDelay: 0,
   });
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
@@ -161,20 +163,7 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
     if (emblaApi) emblaApi.reInit();
   }, [emblaApi, isDesktop]);
 
-  useEffect(() => {
-    if (!emblaApi) return;
-    let resumeTimer: ReturnType<typeof setTimeout>;
-    const handlePointerUp = () => {
-      clearTimeout(resumeTimer);
-      resumeTimer = setTimeout(() => autoScrollPlugin.play(), 3000);
-    };
-    emblaApi.on("pointerUp", handlePointerUp);
-    return () => {
-      emblaApi.off("pointerUp", handlePointerUp);
-      clearTimeout(resumeTimer);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [emblaApi]);
+  useCarouselInertia(emblaApi, autoScrollPlugin, 1.2);
 
   if (visible.length === 0) return null;
 
