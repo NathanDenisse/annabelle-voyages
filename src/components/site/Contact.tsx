@@ -53,11 +53,11 @@ export default function Contact({ content }: ContactProps) {
   return (
     <section
       id="contact"
-      className="relative py-24 md:py-36 overflow-hidden bg-[#1A1210]"
+      className="relative py-12 md:py-16 overflow-hidden bg-[#1A1210]"
     >
       <div ref={ref} className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className={`text-center mb-14 transition-all duration-700 ease-out ${
+        <div className={`text-center mb-8 transition-all duration-700 ease-out ${
           isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
         }`}>
           <p className="font-sans text-xs font-light text-white/40 tracking-[0.5em] uppercase mb-5">

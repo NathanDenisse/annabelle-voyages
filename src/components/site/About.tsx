@@ -36,7 +36,7 @@ export default function About({ content, aboutImageUrl, socials }: AboutProps) {
   const imageSrc = aboutImageUrl || "/images/placeholders/about.svg";
 
   return (
-    <section id="about" className="py-24 md:py-36 overflow-hidden relative bg-gradient-to-br from-cream-100 via-blush-100 to-cream-100">
+    <section id="about" className="py-12 md:py-16 overflow-hidden relative bg-gradient-to-br from-cream-100 via-blush-100 to-cream-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div
           ref={sectionRef}

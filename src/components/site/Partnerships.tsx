@@ -168,9 +168,9 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
 
   return (
     <>
-      <section id="partnerships" className="relative py-24 md:py-36 overflow-hidden bg-gradient-to-br from-brown-900 via-[#3D2420] to-brown-900">
+      <section id="partnerships" className="relative py-12 md:py-16 overflow-hidden bg-gradient-to-br from-brown-900 via-[#3D2420] to-brown-900">
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div ref={ref} className={`text-center mb-16 transition-all duration-700 ease-out ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+          <div ref={ref} className={`text-center mb-8 transition-all duration-700 ease-out ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
             <p className="font-sans text-xs font-light text-white/40 tracking-[0.5em] uppercase mb-5">{t(content.partnershipsTitle, lang)}</p>
             <h2 className="font-serif italic font-normal text-4xl md:text-6xl text-white mb-5">
               {lang === "fr" ? "Ils m'ont fait confiance" : "They trusted me"}

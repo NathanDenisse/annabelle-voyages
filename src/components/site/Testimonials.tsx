@@ -123,11 +123,11 @@ export default function Testimonials({ items }: TestimonialsProps) {
   if (visible.length === 0) return null;
 
   return (
-    <section id="testimonials" className="py-24 md:py-32 bg-[#F8F0EB]">
+    <section id="testimonials" className="py-12 md:py-16 bg-[#F8F0EB]">
       {/* Header */}
       <div
         ref={headerRef}
-        className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-14 transition-all duration-700 ease-out ${
+        className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-8 transition-all duration-700 ease-out ${
           isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
         }`}
       >
