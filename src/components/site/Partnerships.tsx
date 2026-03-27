@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useInView, AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, X, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
+import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
 import { Partnership, SiteContent } from "@/types";
@@ -130,17 +131,6 @@ function PartnershipCard({
   );
 }
 
-function CarouselDots({ count, active }: { count: number; active: number }) {
-  if (count <= 1) return null;
-  return (
-    <div className="flex justify-center gap-1.5 mt-6">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className={`rounded-full transition-all duration-300 ${i === active ? "w-6 h-2 bg-terracotta-400" : "w-2 h-2 bg-white/20"}`} />
-      ))}
-    </div>
-  );
-}
-
 // ─── Main component ───
 export default function Partnerships({ items, content }: PartnershipsProps) {
   const { lang } = useLanguage();
@@ -149,38 +139,41 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [selectedPartnership, setSelectedPartnership] = useState<Partnership | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [activeIndex, setActiveIndex] = useState(0);
 
-  const prefersReduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    loop: true,
-    align: "center",
-    skipSnaps: false,
-    duration: prefersReduced ? 0 : 20,
-    active: !isDesktop,
+  const autoScrollPlugin = AutoScroll({
+    speed: 1.2,
+    stopOnInteraction: false,
+    stopOnMouseEnter: false,
   });
 
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    { loop: true, align: "start", dragFree: true, active: !isDesktop },
+    [autoScrollPlugin]
+  );
+
   const visible = items.filter((item) => item.visible !== false);
-
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    setActiveIndex(emblaApi.selectedScrollSnap());
-  }, [emblaApi]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    emblaApi.on("select", onSelect);
-    onSelect();
-    return () => { emblaApi.off("select", onSelect); };
-  }, [emblaApi, onSelect]);
 
   useEffect(() => {
     if (emblaApi) emblaApi.reInit();
   }, [emblaApi, isDesktop]);
 
-  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+  // After manual swipe, resume auto-scroll after 3s
+  useEffect(() => {
+    if (!emblaApi) return;
+    let resumeTimer: ReturnType<typeof setTimeout>;
+    const handlePointerUp = () => {
+      clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(() => {
+        autoScrollPlugin.play();
+      }, 3000);
+    };
+    emblaApi.on("pointerUp", handlePointerUp);
+    return () => {
+      emblaApi.off("pointerUp", handlePointerUp);
+      clearTimeout(resumeTimer);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emblaApi]);
 
   if (visible.length === 0) return null;
 
@@ -218,44 +211,18 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
             </div>
           </div>
         ) : (
-          /* ─── Mobile: Embla carousel ─── */
-          <div className="relative">
-            <div className="overflow-hidden" ref={emblaRef}>
-              <div className="flex">
-                {visible.map((item, i) => {
-                  const format = item.mp4VideoUrl ? "landscape" : getVideoFormat(item.videoUrl);
-                  return (
-                    <div key={item.id} className={`flex-none px-3 ${format === "short" ? "w-[65%]" : "w-[88%]"}`}>
-                      <div style={{ transform: i === activeIndex ? "scale(1)" : "scale(0.95)", opacity: i === activeIndex ? 1 : 0.6, transition: "transform 0.3s ease-out, opacity 0.3s ease-out" }}>
-                        <PartnershipCard item={item} onClick={() => openGallery(item)} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          /* ─── Mobile: Embla auto-scroll carousel ─── */
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex">
+              {visible.map((item) => {
+                const format = item.mp4VideoUrl ? "landscape" : getVideoFormat(item.videoUrl);
+                return (
+                  <div key={item.id} className={`flex-none px-1.5 ${format === "short" ? "w-[62%]" : "w-[84%]"}`}>
+                    <PartnershipCard item={item} onClick={() => openGallery(item)} />
+                  </div>
+                );
+              })}
             </div>
-
-            {/* Navigation arrows */}
-            {visible.length > 1 && (
-              <>
-                <button
-                  onClick={scrollPrev}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/25 active:scale-95 transition-all"
-                  aria-label="Précédent"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button
-                  onClick={scrollNext}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/25 active:scale-95 transition-all"
-                  aria-label="Suivant"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </>
-            )}
-
-            <CarouselDots count={visible.length} active={activeIndex} />
           </div>
         )}
       </section>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useInView, AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { X, MapPin, ExternalLink, Play, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, MapPin, ExternalLink, Play } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
+import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t, filterLabels } from "@/lib/i18n";
 import { PortfolioItem, MediaCategory, SiteContent, CATEGORY_LABELS } from "@/types";
@@ -222,16 +223,6 @@ function Lightbox({ item, lang, onClose }: { item: PortfolioItem; lang: "fr" | "
   );
 }
 
-function CarouselDots({ count, active }: { count: number; active: number }) {
-  if (count <= 1) return null;
-  return (
-    <div className="flex justify-center gap-1.5 mt-6">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className={`rounded-full transition-all duration-300 ${i === active ? "w-6 h-2 bg-terracotta-500" : "w-2 h-2 bg-brown-200"}`} />
-      ))}
-    </div>
-  );
-}
 
 // ─── Main component ───
 export default function Portfolio({ items, content }: PortfolioProps) {
@@ -239,41 +230,44 @@ export default function Portfolio({ items, content }: PortfolioProps) {
   const isDesktop = useBreakpoint();
   const [activeCategory, setActiveCategory] = useState<MediaCategory | "all">("all");
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
   const headerRef = useRef(null);
   const isInView = useInView(headerRef, { once: true, margin: "-80px" });
 
-  const prefersReduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    loop: true,
-    align: "center",
-    skipSnaps: false,
-    duration: prefersReduced ? 0 : 20,
-    active: !isDesktop,
+  const autoScrollPlugin = AutoScroll({
+    speed: 1.2,
+    stopOnInteraction: false,
+    stopOnMouseEnter: false,
   });
+
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    { loop: true, align: "start", dragFree: true, active: !isDesktop },
+    [autoScrollPlugin]
+  );
 
   const visibleItems = items.filter((item) => item.visible);
   const filtered = activeCategory === "all" ? visibleItems : visibleItems.filter((item) => item.category === activeCategory);
 
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    setActiveIndex(emblaApi.selectedScrollSnap());
-  }, [emblaApi]);
-
   useEffect(() => {
-    if (!emblaApi) return;
-    emblaApi.on("select", onSelect);
-    onSelect();
-    return () => { emblaApi.off("select", onSelect); };
-  }, [emblaApi, onSelect]);
-
-  useEffect(() => {
-    if (emblaApi) { emblaApi.reInit(); setActiveIndex(0); }
+    if (emblaApi) emblaApi.reInit();
   }, [activeCategory, emblaApi, isDesktop]);
 
-  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+  // After manual swipe, resume auto-scroll after 3s
+  useEffect(() => {
+    if (!emblaApi) return;
+    let resumeTimer: ReturnType<typeof setTimeout>;
+    const handlePointerUp = () => {
+      clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(() => {
+        autoScrollPlugin.play();
+      }, 3000);
+    };
+    emblaApi.on("pointerUp", handlePointerUp);
+    return () => {
+      emblaApi.off("pointerUp", handlePointerUp);
+      clearTimeout(resumeTimer);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emblaApi]);
 
   return (
     <section id="portfolio" className="py-20 md:py-28 bg-cream-100">
@@ -307,44 +301,18 @@ export default function Portfolio({ items, content }: PortfolioProps) {
             </div>
           </div>
         ) : (
-          /* ─── Mobile: Embla carousel ─── */
-          <div className="relative">
-            <div className="overflow-hidden" ref={emblaRef}>
-              <div className="flex">
-                {filtered.map((item, index) => {
-                  const format = getCardFormat(item);
-                  return (
-                    <div key={item.id} className={`flex-none px-3 ${format === "short" ? "w-[65%]" : "w-[88%]"}`}>
-                      <div style={{ transform: index === activeIndex ? "scale(1)" : "scale(0.95)", opacity: index === activeIndex ? 1 : 0.6, transition: "transform 0.3s ease-out, opacity 0.3s ease-out" }}>
-                        <MediaCard item={item} lang={lang} format={format} onClick={() => setSelectedItem(item)} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          /* ─── Mobile: Embla auto-scroll carousel ─── */
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex">
+              {filtered.map((item) => {
+                const format = getCardFormat(item);
+                return (
+                  <div key={item.id} className={`flex-none px-1.5 ${format === "short" ? "w-[62%]" : "w-[84%]"}`}>
+                    <MediaCard item={item} lang={lang} format={format} onClick={() => setSelectedItem(item)} />
+                  </div>
+                );
+              })}
             </div>
-
-            {/* Navigation arrows */}
-            {filtered.length > 1 && (
-              <>
-                <button
-                  onClick={scrollPrev}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-brown-700 hover:bg-white active:scale-95 transition-all"
-                  aria-label="Précédent"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button
-                  onClick={scrollNext}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-brown-700 hover:bg-white active:scale-95 transition-all"
-                  aria-label="Suivant"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </>
-            )}
-
-            <CarouselDots count={filtered.length} active={activeIndex} />
           </div>
         )
       ) : (
