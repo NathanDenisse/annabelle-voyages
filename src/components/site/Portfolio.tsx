@@ -125,13 +125,14 @@ function MediaCard({
         />
       )}
 
-      {/* YouTube: load iframe when in viewport */}
+      {/* YouTube: load iframe when in viewport — pointer-events:none so clicks reach the card onClick */}
       {embedUrl && !isMp4 && inViewport && (
         <iframe
           src={embedUrl}
           title={t(item.title, lang)}
           allow="autoplay; encrypted-media"
           onLoad={() => setVideoLoaded(true)}
+          style={{ pointerEvents: "none" }}
           className={`absolute inset-0 w-full h-full border-none transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
           aria-hidden="true"
         />
@@ -322,6 +323,27 @@ export default function Portfolio({ items, content }: PortfolioProps) {
                 })}
               </div>
             </div>
+
+            {/* Navigation arrows */}
+            {filtered.length > 1 && (
+              <>
+                <button
+                  onClick={scrollPrev}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-brown-700 hover:bg-white active:scale-95 transition-all"
+                  aria-label="Précédent"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  onClick={scrollNext}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-brown-700 hover:bg-white active:scale-95 transition-all"
+                  aria-label="Suivant"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </>
+            )}
+
             <CarouselDots count={filtered.length} active={activeIndex} />
           </div>
         )

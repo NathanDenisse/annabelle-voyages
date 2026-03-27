@@ -100,10 +100,11 @@ function PartnershipCard({
         />
       )}
 
-      {/* YouTube: iframe loads when in viewport */}
+      {/* YouTube: iframe loads when in viewport — pointer-events:none so clicks reach the card onClick */}
       {embedUrl && !isMp4 && inViewport && (
         <iframe src={embedUrl} title={`${item.name} video`} allow="autoplay; encrypted-media"
           onLoad={() => setVideoLoaded(true)}
+          style={{ pointerEvents: "none" }}
           className={`absolute inset-0 w-full h-full border-none transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
           aria-hidden="true"
         />
@@ -233,6 +234,27 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
                 })}
               </div>
             </div>
+
+            {/* Navigation arrows */}
+            {visible.length > 1 && (
+              <>
+                <button
+                  onClick={scrollPrev}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/25 active:scale-95 transition-all"
+                  aria-label="Précédent"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  onClick={scrollNext}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/25 active:scale-95 transition-all"
+                  aria-label="Suivant"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </>
+            )}
+
             <CarouselDots count={visible.length} active={activeIndex} />
           </div>
         )}
