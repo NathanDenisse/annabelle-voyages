@@ -1,0 +1,153 @@
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cream: #FDF6F0;
+  --blush: #F5E6E0;
+  --brown: #3D2C2E;
+  --terracotta: #C4917B;
+  --gold: #D4A574;
+  --sunset-orange: #E8956D;
+  --sunset-pink: #D4688B;
+}
+
+/* ── Page fade-in ── */
+@keyframes pageIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--cream);
+  color: var(--brown);
+  font-family: 'DM Sans', sans-serif;
+  overflow-x: hidden;
+  animation: pageIn 0.3s ease-out;
+}
+
+/* ── Respect prefers-reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.font-script {
+  font-family: 'Great Vibes', cursive;
+}
+
+.font-serif {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--cream); }
+::-webkit-scrollbar-thumb { background: var(--terracotta); border-radius: 3px; }
+
+/* Admin */
+.admin-layout {
+  min-height: 100vh;
+  background-color: #FAF8F5;
+}
+
+/* Lightbox */
+.lightbox-overlay {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Drag */
+.drag-handle { cursor: grab; }
+.drag-handle:active { cursor: grabbing; }
+
+/* Video embed */
+.video-wrapper {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.video-wrapper iframe {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+.video-wrapper-short {
+  position: relative;
+  padding-bottom: 177.78%; /* 9:16 */
+  height: 0;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.video-wrapper-short iframe {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+
+/* Hero video background */
+.hero-video-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.hero-video-bg iframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(110%, 178vh);
+  height: max(110%, 56.25vw);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  border: none;
+}
+
+/* Masonry layout */
+.masonry-grid {
+  columns: 1;
+  column-gap: 1.25rem;
+}
+@media (min-width: 640px) {
+  .masonry-grid { columns: 2; }
+}
+@media (min-width: 1024px) {
+  .masonry-grid { columns: 3; }
+}
+.masonry-item {
+  break-inside: avoid;
+  margin-bottom: 1.25rem;
+  display: block;
+}
+
+/* Sunset gradient utilities */
+.gradient-sunset {
+  background: linear-gradient(135deg, #E8956D 0%, #C4917B 40%, #D4688B 100%);
+}
+.gradient-sunset-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(42,30,27,0.5) 0%,
+    rgba(42,30,27,0.15) 40%,
+    rgba(42,30,27,0.7) 100%
+  );
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}

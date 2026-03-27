@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="portGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#EDD5CC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F5E6E0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#portGrad)" rx="12"/>
+  <!-- Mountain landscape -->
+  <polygon points="0,220 80,120 160,180 240,80 320,150 400,100 400,300 0,300" fill="#C4917B" opacity="0.35"/>
+  <!-- Sun/Moon -->
+  <circle cx="320" cy="80" r="40" fill="#D4A574" opacity="0.4"/>
+  <!-- Camera icon -->
+  <rect x="160" y="115" width="80" height="60" rx="8" fill="#7D5E60" opacity="0.25"/>
+  <circle cx="200" cy="145" r="18" fill="#5C4345" opacity="0.2"/>
+  <rect x="175" y="108" width="25" height="10" rx="4" fill="#7D5E60" opacity="0.25"/>
+  <text x="200" y="255" text-anchor="middle" font-family="Georgia, serif" font-size="13" fill="#7D5E60" opacity="0.6">Média portfolio</text>
+</svg>

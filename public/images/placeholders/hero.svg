@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3D2C2E;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#5C4345;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C4917B;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#heroGrad)"/>
+  <!-- Decorative circles -->
+  <circle cx="200" cy="200" r="300" fill="#D4A574" opacity="0.08"/>
+  <circle cx="1700" cy="900" r="400" fill="#C4917B" opacity="0.1"/>
+  <circle cx="960" cy="540" r="500" fill="#F5E6E0" opacity="0.04"/>
+  <!-- Mountain silhouette -->
+  <polygon points="0,800 200,400 400,600 600,300 800,550 960,250 1120,500 1320,350 1500,600 1700,420 1920,700 1920,1080 0,1080" fill="#2A1F20" opacity="0.4"/>
+  <!-- Horizon glow -->
+  <ellipse cx="960" cy="540" rx="600" ry="200" fill="#D4A574" opacity="0.12"/>
+  <!-- Text placeholder -->
+  <text x="960" y="480" text-anchor="middle" font-family="Georgia, serif" font-size="72" fill="#FDF6F0" opacity="0.3" letter-spacing="8">ANNABELLE VOYAGES</text>
+  <text x="960" y="560" text-anchor="middle" font-family="Georgia, serif" font-size="24" fill="#D4A574" opacity="0.4" letter-spacing="4">Photo de fond — remplaçable via l'admin</text>
+</svg>
