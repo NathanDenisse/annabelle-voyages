@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Instagram, Youtube, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
@@ -9,6 +9,7 @@ import { SiteContent, SocialLinks } from "@/types";
 interface HeroProps {
   content: SiteContent;
   socials: SocialLinks;
+  onReady?: () => void;
 }
 
 function TikTokIcon({ size = 20 }: { size?: number }) {
@@ -19,17 +20,33 @@ function TikTokIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export default function Hero({ content, socials }: HeroProps) {
+export default function Hero({ content, socials, onReady }: HeroProps) {
   const { lang } = useLanguage();
-  const [ready, setReady] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
+  const firedRef = useRef(false);
 
   const videoUrl = content.heroVideoUrl || null;
 
   useEffect(() => {
-    // 3s fallback — show content on dark bg if video too slow
-    const fallback = setTimeout(() => setReady(true), 3000);
+    // 2s fallback — déclenche le fade-in global si la vidéo tarde
+    const fallback = setTimeout(() => {
+      if (!firedRef.current) {
+        firedRef.current = true;
+        setVideoReady(true);
+        onReady?.();
+      }
+    }, 2000);
     return () => clearTimeout(fallback);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleVideoReady = () => {
+    if (!firedRef.current) {
+      firedRef.current = true;
+      setVideoReady(true);
+      onReady?.();
+    }
+  };
 
   const scrollToPortfolio = () => {
     document.querySelector("#portfolio")?.scrollIntoView({ behavior: "smooth" });
@@ -47,22 +64,20 @@ export default function Hero({ content, socials }: HeroProps) {
             loop
             playsInline
             preload="auto"
-            onCanPlay={() => setReady(true)}
+            onCanPlay={handleVideoReady}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
-              ready ? "opacity-100" : "opacity-0"
+              videoReady ? "opacity-100" : "opacity-0"
             }`}
           />
         )}
 
         {/* Overlays */}
-        <div className={`absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/60 transition-opacity duration-[800ms] ease-out ${ready ? "opacity-100" : "opacity-0"}`} />
-        <div className={`absolute inset-0 bg-black/10 transition-opacity duration-[800ms] ease-out ${ready ? "opacity-100" : "opacity-0"}`} />
+        <div className={`absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/60 transition-opacity duration-[800ms] ease-out ${videoReady ? "opacity-100" : "opacity-0"}`} />
+        <div className={`absolute inset-0 bg-black/10 transition-opacity duration-[800ms] ease-out ${videoReady ? "opacity-100" : "opacity-0"}`} />
       </div>
 
-      {/* ── Content ── */}
-      <div className={`relative z-10 text-center px-6 max-w-5xl mx-auto transition-all duration-700 ease-out ${
-        ready ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-      }`}>
+      {/* ── Content — toujours visible, le fade-in global est géré par page.tsx ── */}
+      <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
         <p className="font-sans text-xs text-white/50 uppercase tracking-[0.5em] mb-6 font-light">
           {lang === "fr" ? "Créatrice de contenu voyage" : "Travel content creator"}
         </p>
@@ -130,9 +145,7 @@ export default function Hero({ content, socials }: HeroProps) {
       {/* ── Scroll indicator ── */}
       <button
         onClick={scrollToPortfolio}
-        className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/50 hover:text-white/80 transition-all duration-700 ${
-          ready ? "opacity-100" : "opacity-0"
-        }`}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/50 hover:text-white/80 transition-colors duration-300"
       >
         <span className="font-sans text-xs tracking-widest uppercase">
           {lang === "fr" ? "Défiler" : "Scroll"}

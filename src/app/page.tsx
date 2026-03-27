@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import { useState } from "react";
 import { useSiteContent, useSocialLinks, usePortfolio, usePartnerships } from "@/hooks/useFirestore";
 import { useLanguageState, LanguageContext } from "@/hooks/useLanguage";
 import Navbar from "@/components/site/Navbar";
@@ -18,12 +19,13 @@ export default function Home() {
   const { socials } = useSocialLinks();
   const { items: portfolioItems } = usePortfolio();
   const { items: partnerships } = usePartnerships();
+  const [pageReady, setPageReady] = useState(false);
 
   return (
     <LanguageContext.Provider value={{ lang, setLang }}>
-      <main>
+      <main className={`transition-opacity duration-[800ms] ease-out ${pageReady ? "opacity-100" : "opacity-0"}`}>
         <Navbar />
-        <Hero content={content} socials={socials} />
+        <Hero content={content} socials={socials} onReady={() => setPageReady(true)} />
         <About content={content} aboutImageUrl={content.aboutImageUrl} socials={socials} />
         <Portfolio items={portfolioItems} content={content} />
         <Partnerships items={partnerships} content={content} />
