@@ -27,9 +27,10 @@ import {
   deletePartnership,
   updatePartnershipOrder,
 } from "@/lib/firestore";
-import { Partnership } from "@/types";
+import { Partnership, MediaItem } from "@/types";
 import { uploadSingleImage, uploadVideo, deleteFileByUrl } from "@/lib/storage";
 import SmartBilingualField from "@/components/admin/SmartBilingualField";
+import GalleryEditor from "@/components/admin/GalleryEditor";
 import SortableItem from "@/components/admin/SortableItem";
 import toast from "react-hot-toast";
 
@@ -41,6 +42,7 @@ const emptyForm = {
   videoUrl: "",
   mp4VideoUrl: "",
   videoSource: "youtube" as "youtube" | "mp4",
+  gallery: [] as MediaItem[],
   externalLink: "",
   visible: true,
 };
@@ -89,6 +91,7 @@ export default function PartnershipsAdmin() {
       videoUrl: item.videoUrl || "",
       mp4VideoUrl: item.mp4VideoUrl || "",
       videoSource: item.mp4VideoUrl ? "mp4" : "youtube",
+      gallery: item.gallery || [],
       externalLink: item.externalLink,
       visible: item.visible,
     });
@@ -183,6 +186,7 @@ export default function PartnershipsAdmin() {
         images: form.images,
         videoUrl: form.videoSource === "youtube" ? (form.videoUrl || "") : "",
         mp4VideoUrl: form.videoSource === "mp4" ? (form.mp4VideoUrl || "") : "",
+        gallery: form.gallery,
         externalLink: form.externalLink,
         visible: form.visible,
         order: editingId
@@ -513,6 +517,13 @@ export default function PartnershipsAdmin() {
                   </>
                 )}
               </div>
+
+              {/* Gallery */}
+              <GalleryEditor
+                items={form.gallery}
+                onChange={(gallery) => setForm({ ...form, gallery })}
+                storagePath={`partnerships/gallery/${Date.now()}`}
+              />
 
               {/* Name */}
               <div>

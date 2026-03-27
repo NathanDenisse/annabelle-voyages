@@ -45,6 +45,12 @@ export interface SocialLinks {
 
 export type MediaCategory = "hotel" | "paysage" | "lifestyle" | "drone";
 
+export interface MediaItem {
+  type: "image" | "video";
+  url: string;
+  platform?: "youtube" | "mp4";
+}
+
 export interface PortfolioItem {
   id: string;
   title: LocalizedText;
@@ -56,6 +62,7 @@ export interface PortfolioItem {
   thumbnailUrl?: string;
   videoUrl?: string; // YouTube/TikTok URL
   mp4VideoUrl?: string; // Direct MP4 from Firebase Storage
+  gallery?: MediaItem[]; // Multi-media gallery
   order: number;
   visible: boolean;
   createdAt?: Date;
@@ -70,6 +77,7 @@ export interface Partnership {
   images?: string[];
   videoUrl?: string; // YouTube URL
   mp4VideoUrl?: string; // Direct MP4 from Firebase Storage
+  gallery?: MediaItem[]; // Multi-media gallery
   externalLink: string;
   order: number;
   visible: boolean;

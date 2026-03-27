@@ -27,10 +27,11 @@ import {
   deletePortfolioItem,
   updatePortfolioOrder,
 } from "@/lib/firestore";
-import { PortfolioItem, MediaCategory, CATEGORY_LABELS } from "@/types";
+import { PortfolioItem, MediaCategory, MediaItem, CATEGORY_LABELS } from "@/types";
 import { getYouTubeThumbnail, deleteFileByUrl, uploadVideo } from "@/lib/storage";
 import SmartBilingualField from "@/components/admin/SmartBilingualField";
 import MediaUploader from "@/components/admin/MediaUploader";
+import GalleryEditor from "@/components/admin/GalleryEditor";
 import SortableItem from "@/components/admin/SortableItem";
 import toast from "react-hot-toast";
 
@@ -47,6 +48,7 @@ const emptyForm = {
   videoUrl: "",
   mp4VideoUrl: "",
   videoSource: "youtube" as "youtube" | "mp4",
+  gallery: [] as MediaItem[],
   visible: true,
 };
 
@@ -92,6 +94,7 @@ export default function PortfolioAdmin() {
       videoUrl: item.videoUrl || "",
       mp4VideoUrl: item.mp4VideoUrl || "",
       videoSource: item.mp4VideoUrl ? "mp4" : "youtube",
+      gallery: item.gallery || [],
       visible: item.visible,
     });
     setEditingId(item.id);
@@ -128,8 +131,8 @@ export default function PortfolioAdmin() {
         ? { mp4VideoUrl: form.mp4VideoUrl, videoUrl: "" }
         : { videoUrl: form.videoUrl, mp4VideoUrl: "" };
       const data = form.type === "image"
-        ? { ...base, imageUrl: form.imageUrl, thumbnailUrl: form.thumbnailUrl }
-        : { ...base, ...videoData };
+        ? { ...base, imageUrl: form.imageUrl, thumbnailUrl: form.thumbnailUrl, gallery: form.gallery }
+        : { ...base, ...videoData, gallery: form.gallery };
 
       if (editingId) {
         await updatePortfolioItem(editingId, data);
@@ -322,6 +325,13 @@ export default function PortfolioAdmin() {
                   storagePath={`portfolio/${Date.now()}`}
                 />
               </div>
+
+              {/* Gallery */}
+              <GalleryEditor
+                items={form.gallery}
+                onChange={(gallery) => setForm({ ...form, gallery })}
+                storagePath={`portfolio/gallery/${Date.now()}`}
+              />
 
               {/* Title */}
               <SmartBilingualField

@@ -1,20 +1,20 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useInView, AnimatePresence, motion } from "framer-motion";
+import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { X, MapPin, ExternalLink, Play } from "lucide-react";
+import { MapPin } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t, filterLabels } from "@/lib/i18n";
-import { PortfolioItem, MediaCategory, SiteContent, CATEGORY_LABELS } from "@/types";
+import { PortfolioItem, MediaCategory, MediaItem, SiteContent, CATEGORY_LABELS } from "@/types";
 import {
   detectVideoSource,
   getVideoThumbnail,
-  getVideoEmbedUrl,
   getYouTubeId,
 } from "@/lib/storage";
+import MediaLightbox from "./MediaLightbox";
 
 interface PortfolioProps {
   items: PortfolioItem[];
@@ -34,6 +34,24 @@ function getCardFormat(item: PortfolioItem): CardFormat {
   return "photo";
 }
 
+/** Build the lightbox gallery from an item — gallery[] first, then legacy fallback */
+function buildGallery(item: PortfolioItem): MediaItem[] {
+  if (item.gallery && item.gallery.length > 0) return item.gallery;
+  if (item.mp4VideoUrl) return [{ type: "video", url: item.mp4VideoUrl, platform: "mp4" }];
+  if (item.videoUrl) return [{ type: "video", url: item.videoUrl, platform: "youtube" }];
+  if (item.imageUrl) return [{ type: "image", url: item.imageUrl }];
+  return [];
+}
+
+/** Card cover thumbnail */
+function getCardThumbnail(item: PortfolioItem): string {
+  const firstImage = item.gallery?.find((m) => m.type === "image");
+  if (firstImage) return firstImage.url;
+  if (item.mp4VideoUrl) return item.thumbnailUrl || "";
+  if (item.videoUrl) return getVideoThumbnail(item.videoUrl);
+  return item.thumbnailUrl || item.imageUrl || "/images/placeholders/portfolio.svg";
+}
+
 function useBreakpoint() {
   const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
@@ -45,7 +63,7 @@ function useBreakpoint() {
   return isDesktop;
 }
 
-// ─── Viewport-aware video card ───
+// ─── Card ───
 function MediaCard({
   item,
   lang,
@@ -62,17 +80,22 @@ function MediaCard({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [inViewport, setInViewport] = useState(false);
 
-  const isMp4 = !!item.mp4VideoUrl;
-  const isVideo = item.type === "video" && (item.videoUrl || item.mp4VideoUrl);
-  const videoId = (!isMp4 && isVideo && item.videoUrl) ? getYouTubeId(item.videoUrl!) : null;
-  const thumbnail = (!isMp4 && isVideo && item.videoUrl)
-    ? getVideoThumbnail(item.videoUrl!)
-    : item.thumbnailUrl || item.imageUrl || "/images/placeholders/portfolio.svg";
-  const embedUrl = videoId
-    ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`
-    : null;
+  const isMp4 = !!item.mp4VideoUrl && !item.gallery?.length;
+  const hasGallery = item.gallery && item.gallery.length > 0;
+  const thumbnail = getCardThumbnail(item);
 
-  // Intersection Observer: play/pause MP4 at 80% visibility, load YouTube iframe
+  // Cover video: only play if no gallery overrides it
+  const firstMedia = hasGallery ? item.gallery![0] : null;
+  const coverIsVideo = firstMedia?.type === "video";
+  const coverVideoId = coverIsVideo && firstMedia?.platform === "youtube"
+    ? getYouTubeId(firstMedia.url)
+    : null;
+  const embedUrl = coverVideoId
+    ? `https://www.youtube.com/embed/${coverVideoId}?autoplay=1&mute=1&loop=1&playlist=${coverVideoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`
+    : (!hasGallery && item.videoUrl && item.type === "video")
+      ? (() => { const id = getYouTubeId(item.videoUrl!); return id ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1` : null; })()
+      : null;
+
   useEffect(() => {
     const el = cardRef.current;
     if (!el) return;
@@ -80,11 +103,8 @@ function MediaCard({
       ([entry]) => {
         setInViewport(entry.isIntersecting);
         if (isMp4 && videoRef.current) {
-          if (entry.isIntersecting) {
-            videoRef.current.play().catch(() => {});
-          } else {
-            videoRef.current.pause();
-          }
+          if (entry.isIntersecting) videoRef.current.play().catch(() => {});
+          else videoRef.current.pause();
         }
       },
       { threshold: 0.8 }
@@ -98,36 +118,35 @@ function MediaCard({
     : format === "landscape" ? "aspect-[16/9]"
     : "aspect-[4/5]";
 
+  const mediaCount = item.gallery?.length ?? 0;
+
   return (
     <div
       ref={cardRef}
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
-      <Image
-        src={thumbnail}
-        alt={t(item.title, lang)}
-        fill
-        className={`object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-0" : "opacity-100"} ${!isVideo ? "group-hover:scale-105 transition-transform duration-500" : ""}`}
-        loading="lazy"
-      />
+      {thumbnail && (
+        <Image
+          src={thumbnail}
+          alt={t(item.title, lang)}
+          fill
+          className={`object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-0" : "opacity-100"}`}
+          loading="lazy"
+        />
+      )}
 
-      {/* MP4: play/pause via IntersectionObserver */}
       {isMp4 && (
         <video
           ref={videoRef}
           src={item.mp4VideoUrl}
-          muted
-          loop
-          playsInline
-          preload="auto"
+          muted loop playsInline preload="auto"
           onCanPlay={() => setVideoLoaded(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
         />
       )}
 
-      {/* YouTube: load iframe when in viewport — pointer-events:none so clicks reach the card onClick */}
-      {embedUrl && !isMp4 && inViewport && (
+      {embedUrl && inViewport && (
         <iframe
           src={embedUrl}
           title={t(item.title, lang)}
@@ -141,11 +160,19 @@ function MediaCard({
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent pointer-events-none" />
 
+      {/* Category tag */}
       <div className="absolute top-3 left-3 z-10">
         <span className="bg-white/80 backdrop-blur-sm text-brown-700 text-xs font-sans font-medium px-2.5 py-1 rounded-full">
           {t(CATEGORY_LABELS[item.category], lang)}
         </span>
       </div>
+
+      {/* Media count badge */}
+      {mediaCount > 1 && (
+        <div className="absolute top-3 right-3 z-10 bg-black/50 backdrop-blur-sm text-white text-xs font-sans px-2 py-0.5 rounded-full">
+          {mediaCount}
+        </div>
+      )}
 
       <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 z-10 pointer-events-none">
         <h3 className="font-serif text-lg sm:text-xl font-medium text-white leading-tight line-clamp-2">
@@ -159,70 +186,6 @@ function MediaCard({
     </div>
   );
 }
-
-// ─── Lightbox & Embeds (unchanged) ───
-function VideoEmbed({ item, lang }: { item: PortfolioItem; lang: "fr" | "en" }) {
-  const url = item.videoUrl || "";
-  const source = detectVideoSource(url);
-  const embedUrl = getVideoEmbedUrl(url);
-  const isShort = source === "youtube-short";
-
-  if (item.mp4VideoUrl) {
-    return (
-      <div className="relative aspect-video mx-4 rounded-xl overflow-hidden bg-black">
-        <video src={item.mp4VideoUrl} autoPlay loop playsInline controls className="w-full h-full object-contain" />
-      </div>
-    );
-  }
-  if ((source === "youtube" || source === "youtube-short") && embedUrl) {
-    return (
-      <div className={isShort ? "video-wrapper-short mx-auto max-w-sm" : "video-wrapper mx-4"}>
-        <iframe src={embedUrl} title={t(item.title, lang)} allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
-      </div>
-    );
-  }
-  if (source === "instagram") {
-    return (
-      <div className="mx-4 py-8 flex flex-col items-center gap-4">
-        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-sans font-medium text-sm px-6 py-3 rounded-full hover:opacity-90 transition-opacity">
-          Voir sur Instagram <ExternalLink size={13} />
-        </a>
-      </div>
-    );
-  }
-  return (
-    <div className="mx-4 py-8 flex flex-col items-center gap-3">
-      <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-terracotta-500 text-white font-sans font-medium text-sm px-5 py-2.5 rounded-full hover:bg-terracotta-600 transition-colors">
-        Voir la vidéo <ExternalLink size={13} />
-      </a>
-    </div>
-  );
-}
-
-function Lightbox({ item, lang, onClose }: { item: PortfolioItem; lang: "fr" | "en"; onClose: () => void }) {
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 lightbox-overlay bg-brown-900/90 flex items-center justify-center p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-end p-3 sticky top-0 bg-white z-10">
-          <button onClick={onClose} className="p-3 rounded-full hover:bg-blush-100 text-brown-400 hover:text-brown-900 transition-colors"><X size={24} /></button>
-        </div>
-        {(item.type === "video" && (item.videoUrl || item.mp4VideoUrl)) ? <VideoEmbed item={item} lang={lang} /> : (
-          <div className="relative aspect-[16/9] mx-4">
-            <Image src={item.imageUrl || item.thumbnailUrl || "/images/placeholders/portfolio.svg"} alt={t(item.title, lang)} fill className="object-cover rounded-2xl" />
-          </div>
-        )}
-        <div className="p-6">
-          <span className="inline-block bg-blush-100 text-terracotta-600 text-xs font-sans font-medium px-3 py-1 rounded-full mb-3">{t(CATEGORY_LABELS[item.category], lang)}</span>
-          <h3 className="font-serif text-2xl md:text-3xl font-medium text-brown-900">{t(item.title, lang)}</h3>
-          <div className="flex items-center gap-1 mt-1"><MapPin size={13} className="text-brown-400" /><p className="font-sans text-sm text-brown-400">{item.location}</p></div>
-          {item.description && <p className="font-sans text-brown-500 mt-4 text-sm leading-relaxed">{t(item.description, lang)}</p>}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 
 // ─── Main component ───
 export default function Portfolio({ items, content }: PortfolioProps) {
@@ -245,21 +208,20 @@ export default function Portfolio({ items, content }: PortfolioProps) {
   );
 
   const visibleItems = items.filter((item) => item.visible);
-  const filtered = activeCategory === "all" ? visibleItems : visibleItems.filter((item) => item.category === activeCategory);
+  const filtered = activeCategory === "all"
+    ? visibleItems
+    : visibleItems.filter((item) => item.category === activeCategory);
 
   useEffect(() => {
     if (emblaApi) emblaApi.reInit();
   }, [activeCategory, emblaApi, isDesktop]);
 
-  // After manual swipe, resume auto-scroll after 3s
   useEffect(() => {
     if (!emblaApi) return;
     let resumeTimer: ReturnType<typeof setTimeout>;
     const handlePointerUp = () => {
       clearTimeout(resumeTimer);
-      resumeTimer = setTimeout(() => {
-        autoScrollPlugin.play();
-      }, 3000);
+      resumeTimer = setTimeout(() => autoScrollPlugin.play(), 3000);
     };
     emblaApi.on("pointerUp", handlePointerUp);
     return () => {
@@ -268,6 +230,8 @@ export default function Portfolio({ items, content }: PortfolioProps) {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emblaApi]);
+
+  const selectedGallery = selectedItem ? buildGallery(selectedItem) : [];
 
   return (
     <section id="portfolio" className="py-20 md:py-28 bg-cream-100">
@@ -301,7 +265,7 @@ export default function Portfolio({ items, content }: PortfolioProps) {
             </div>
           </div>
         ) : (
-          /* ─── Mobile: Embla auto-scroll carousel ─── */
+          /* ─── Mobile: Embla auto-scroll ─── */
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
               {filtered.map((item) => {
@@ -316,11 +280,20 @@ export default function Portfolio({ items, content }: PortfolioProps) {
           </div>
         )
       ) : (
-        <p className="text-center font-sans text-brown-300 py-16 text-sm">{lang === "fr" ? "Aucun contenu dans cette catégorie" : "No content in this category"}</p>
+        <p className="text-center font-sans text-brown-300 py-16 text-sm">
+          {lang === "fr" ? "Aucun contenu dans cette catégorie" : "No content in this category"}
+        </p>
       )}
 
       <AnimatePresence>
-        {selectedItem && <Lightbox item={selectedItem} lang={lang} onClose={() => setSelectedItem(null)} />}
+        {selectedItem && selectedGallery.length > 0 && (
+          <MediaLightbox
+            items={selectedGallery}
+            title={t(selectedItem.title, lang)}
+            description={selectedItem.description ? t(selectedItem.description, lang) : undefined}
+            onClose={() => setSelectedItem(null)}
+          />
+        )}
       </AnimatePresence>
     </section>
   );

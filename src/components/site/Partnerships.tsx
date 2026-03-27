@@ -1,15 +1,15 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { useInView, AnimatePresence, motion } from "framer-motion";
+import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
-import { Partnership, SiteContent } from "@/types";
+import { Partnership, SiteContent, MediaItem } from "@/types";
 import { getYouTubeId, detectVideoSource } from "@/lib/storage";
+import MediaLightbox from "./MediaLightbox";
 
 interface PartnershipsProps {
   items: Partnership[];
@@ -37,38 +37,60 @@ function useBreakpoint() {
   return isDesktop;
 }
 
-// ─── Viewport-aware card ───
-function PartnershipCard({
-  item,
-  onClick,
-}: {
-  item: Partnership;
-  onClick: () => void;
-}) {
+/** Build lightbox gallery — gallery[] first, then legacy fallback */
+function buildPartnershipGallery(item: Partnership): MediaItem[] {
+  if (item.gallery && item.gallery.length > 0) return item.gallery;
+  const result: MediaItem[] = [];
+  if (item.mp4VideoUrl) result.push({ type: "video", url: item.mp4VideoUrl, platform: "mp4" });
+  if (item.videoUrl) result.push({ type: "video", url: item.videoUrl, platform: "youtube" });
+  if (item.images) item.images.forEach((url) => result.push({ type: "image", url }));
+  return result;
+}
+
+// ─── Card ───
+function PartnershipCard({ item, onClick }: { item: Partnership; onClick: () => void }) {
   const { lang } = useLanguage();
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [inViewport, setInViewport] = useState(false);
 
-  const isMp4 = !!item.mp4VideoUrl;
-  const format = isMp4 ? "landscape" : getVideoFormat(item.videoUrl);
-  const videoId = (!isMp4 && item.videoUrl) ? getYouTubeId(item.videoUrl) : null;
-  const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
+  // Determine cover from gallery or legacy fields
+  const hasGallery = item.gallery && item.gallery.length > 0;
+  const firstMedia = hasGallery ? item.gallery![0] : null;
+  const isMp4Cover = firstMedia?.platform === "mp4" || (!hasGallery && !!item.mp4VideoUrl);
+  const mp4Src = firstMedia?.platform === "mp4" ? firstMedia.url : (!hasGallery ? item.mp4VideoUrl : undefined);
+
+  const youtubeUrl = firstMedia?.type === "video" && firstMedia.platform === "youtube"
+    ? firstMedia.url
+    : (!hasGallery ? item.videoUrl : undefined);
+  const videoId = youtubeUrl ? getYouTubeId(youtubeUrl) : null;
+  const format: VideoFormat = isMp4Cover ? "landscape" : (youtubeUrl ? getVideoFormat(youtubeUrl) : "none");
+
   const embedUrl = videoId
     ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`
     : null;
-  const hasImages = item.images && item.images.length > 0;
-  const coverImage = thumbnailUrl || (hasImages ? item.images![0] : item.logoUrl);
 
-  // IntersectionObserver: play/pause MP4, load YouTube iframe at 80%
+  // Cover image: first image from gallery, or yt thumbnail, or legacy images
+  const coverImage = (() => {
+    if (hasGallery) {
+      const firstImg = item.gallery!.find((m) => m.type === "image");
+      if (firstImg) return firstImg.url;
+      if (videoId) return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      return item.logoUrl || null;
+    }
+    if (videoId) return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+    if (item.images && item.images.length > 0) return item.images[0];
+    return item.logoUrl || null;
+  })();
+
   useEffect(() => {
     const el = cardRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         setInViewport(entry.isIntersecting);
-        if (isMp4 && videoRef.current) {
+        if (isMp4Cover && videoRef.current) {
           if (entry.isIntersecting) videoRef.current.play().catch(() => {});
           else videoRef.current.pause();
         }
@@ -77,9 +99,10 @@ function PartnershipCard({
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [isMp4]);
+  }, [isMp4Cover]);
 
   const aspectClass = format === "short" ? "aspect-[9/16]" : "aspect-[16/9]";
+  const mediaCount = item.gallery?.length ?? ((item.images?.length ?? 0) + (item.videoUrl || item.mp4VideoUrl ? 1 : 0));
 
   return (
     <div
@@ -88,21 +111,22 @@ function PartnershipCard({
       className={`group relative rounded-2xl overflow-hidden border border-white/10 hover:border-terracotta-500/40 cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
       {coverImage ? (
-        <Image src={coverImage} alt={item.name} fill className={`object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-0" : "opacity-100"}`} loading="lazy" />
+        <Image src={coverImage} alt={item.name} fill
+          className={`object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-0" : "opacity-100"}`}
+          loading="lazy"
+        />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#4A3230] to-[#2A1815]" />
       )}
 
-      {/* MP4: controlled by IntersectionObserver */}
-      {isMp4 && (
-        <video ref={videoRef} src={item.mp4VideoUrl} muted loop playsInline preload="auto"
+      {isMp4Cover && mp4Src && (
+        <video ref={videoRef} src={mp4Src} muted loop playsInline preload="auto"
           onCanPlay={() => setVideoLoaded(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
         />
       )}
 
-      {/* YouTube: iframe loads when in viewport — pointer-events:none so clicks reach the card onClick */}
-      {embedUrl && !isMp4 && inViewport && (
+      {embedUrl && !isMp4Cover && inViewport && (
         <iframe src={embedUrl} title={`${item.name} video`} allow="autoplay; encrypted-media"
           onLoad={() => setVideoLoaded(true)}
           style={{ pointerEvents: "none" }}
@@ -113,9 +137,9 @@ function PartnershipCard({
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
 
-      {!videoId && !isMp4 && hasImages && item.images!.length > 1 && (
+      {mediaCount > 1 && (
         <div className="absolute top-3 right-3 z-10 bg-black/50 backdrop-blur-sm text-white text-xs font-sans px-2.5 py-1 rounded-full">
-          {item.images!.length} photos
+          {mediaCount} médias
         </div>
       )}
 
@@ -138,7 +162,6 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [selectedPartnership, setSelectedPartnership] = useState<Partnership | null>(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const autoScrollPlugin = AutoScroll({
     speed: 1.2,
@@ -157,15 +180,12 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
     if (emblaApi) emblaApi.reInit();
   }, [emblaApi, isDesktop]);
 
-  // After manual swipe, resume auto-scroll after 3s
   useEffect(() => {
     if (!emblaApi) return;
     let resumeTimer: ReturnType<typeof setTimeout>;
     const handlePointerUp = () => {
       clearTimeout(resumeTimer);
-      resumeTimer = setTimeout(() => {
-        autoScrollPlugin.play();
-      }, 3000);
+      resumeTimer = setTimeout(() => autoScrollPlugin.play(), 3000);
     };
     emblaApi.on("pointerUp", handlePointerUp);
     return () => {
@@ -177,12 +197,7 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
 
   if (visible.length === 0) return null;
 
-  const openGallery = (item: Partnership) => { setSelectedPartnership(item); setCurrentImageIndex(0); };
-  const closeGallery = () => { setSelectedPartnership(null); setCurrentImageIndex(0); };
-  const nextImage = () => { if (selectedPartnership?.images) setCurrentImageIndex((p) => p < selectedPartnership.images!.length - 1 ? p + 1 : 0); };
-  const prevImage = () => { if (selectedPartnership?.images) setCurrentImageIndex((p) => p > 0 ? p - 1 : selectedPartnership.images!.length - 1); };
-  const getModalVideoId = () => selectedPartnership?.videoUrl ? getYouTubeId(selectedPartnership.videoUrl) : null;
-  const getModalVideoFormat = () => selectedPartnership?.videoUrl ? getVideoFormat(selectedPartnership.videoUrl) : "none";
+  const selectedGallery = selectedPartnership ? buildPartnershipGallery(selectedPartnership) : [];
 
   return (
     <>
@@ -194,7 +209,9 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
               {lang === "fr" ? "Ils m'ont fait confiance" : "They trusted me"}
             </h2>
             <p className="font-sans text-white/50 max-w-xl mx-auto text-sm leading-relaxed">
-              {lang === "fr" ? "Des collaborations authentiques avec des marques et hôtels qui partagent ma vision du voyage." : "Authentic collaborations with brands and hotels that share my vision of travel."}
+              {lang === "fr"
+                ? "Des collaborations authentiques avec des marques et hôtels qui partagent ma vision du voyage."
+                : "Authentic collaborations with brands and hotels that share my vision of travel."}
             </p>
           </div>
         </div>
@@ -205,20 +222,20 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
             <div className="columns-2 lg:columns-3 gap-5">
               {visible.map((item) => (
                 <div key={item.id} className="break-inside-avoid mb-5">
-                  <PartnershipCard item={item} onClick={() => openGallery(item)} />
+                  <PartnershipCard item={item} onClick={() => setSelectedPartnership(item)} />
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          /* ─── Mobile: Embla auto-scroll carousel ─── */
+          /* ─── Mobile: Embla auto-scroll ─── */
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
               {visible.map((item) => {
                 const format = item.mp4VideoUrl ? "landscape" : getVideoFormat(item.videoUrl);
                 return (
                   <div key={item.id} className={`flex-none px-1.5 ${format === "short" ? "w-[62%]" : "w-[84%]"}`}>
-                    <PartnershipCard item={item} onClick={() => openGallery(item)} />
+                    <PartnershipCard item={item} onClick={() => setSelectedPartnership(item)} />
                   </div>
                 );
               })}
@@ -227,47 +244,23 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
         )}
       </section>
 
-      {/* Modal */}
       <AnimatePresence>
-        {selectedPartnership && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center" onClick={closeGallery}>
-            <button onClick={closeGallery} className="absolute top-4 right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"><X size={24} /></button>
-            <div className="absolute top-4 left-4 z-10">
-              <h3 className="font-serif italic text-xl text-white">{selectedPartnership.name}</h3>
-              {!getModalVideoId() && !selectedPartnership.mp4VideoUrl && selectedPartnership.images && selectedPartnership.images.length > 0 && (
-                <p className="font-sans text-sm text-white/50 mt-1">{currentImageIndex + 1} / {selectedPartnership.images.length}</p>
-              )}
-            </div>
-
-            {selectedPartnership.mp4VideoUrl ? (
-              <div className="relative w-full max-w-5xl aspect-video mx-4" onClick={(e) => e.stopPropagation()}>
-                <video src={selectedPartnership.mp4VideoUrl} autoPlay loop playsInline controls className="w-full h-full object-contain rounded-xl" />
-              </div>
-            ) : getModalVideoId() ? (
-              <div className={`relative mx-4 ${getModalVideoFormat() === "short" ? "w-full max-w-sm aspect-[9/16]" : "w-full max-w-5xl aspect-video"}`} onClick={(e) => e.stopPropagation()}>
-                <iframe src={`https://www.youtube.com/embed/${getModalVideoId()}?autoplay=1&mute=0&loop=1&playlist=${getModalVideoId()}&controls=1&rel=0&modestbranding=1&playsinline=1`}
-                  title={selectedPartnership.name} allow="autoplay; encrypted-media; fullscreen" allowFullScreen className="absolute inset-0 w-full h-full rounded-xl border-none" />
-              </div>
-            ) : selectedPartnership.images && selectedPartnership.images.length > 0 ? (
-              <>
-                <div className="relative w-full h-full max-w-5xl max-h-[80vh] mx-4 my-16" onClick={(e) => e.stopPropagation()}>
-                  <Image src={selectedPartnership.images[currentImageIndex]} alt={`${selectedPartnership.name} - ${currentImageIndex + 1}`} fill className="object-contain" />
-                </div>
-                {selectedPartnership.images.length > 1 && (
-                  <>
-                    <button onClick={(e) => { e.stopPropagation(); prevImage(); }} className="absolute left-3 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"><ChevronLeft size={24} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); nextImage(); }} className="absolute right-3 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"><ChevronRight size={24} /></button>
-                  </>
-                )}
-              </>
-            ) : (
-              <div className="text-center" onClick={(e) => e.stopPropagation()}>
-                <p className="font-sans text-white/40 text-lg mb-2">{lang === "fr" ? "Pas encore de contenu" : "No content yet"}</p>
-                <p className="font-sans text-white/25 text-sm">{t(selectedPartnership.description, lang)}</p>
-              </div>
-            )}
-          </motion.div>
+        {selectedPartnership && selectedGallery.length > 0 && (
+          <MediaLightbox
+            items={selectedGallery}
+            title={selectedPartnership.name}
+            description={t(selectedPartnership.description, lang)}
+            onClose={() => setSelectedPartnership(null)}
+          />
+        )}
+        {selectedPartnership && selectedGallery.length === 0 && (
+          // No content yet — show name only (reuse lightbox shell via empty state)
+          <MediaLightbox
+            items={[]}
+            title={selectedPartnership.name}
+            description={t(selectedPartnership.description, lang)}
+            onClose={() => setSelectedPartnership(null)}
+          />
         )}
       </AnimatePresence>
     </>
