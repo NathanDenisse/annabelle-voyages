@@ -144,12 +144,13 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [selectedPartnership, setSelectedPartnership] = useState<Partnership | null>(null);
 
-  const autoScrollPlugin = AutoScroll({
+  // Stable plugin reference — must not be recreated on re-renders
+  const autoScrollPlugin = useRef(AutoScroll({
     speed: 1.2,
     stopOnInteraction: false,
     stopOnMouseEnter: false,
     startDelay: 0,
-  });
+  })).current;
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     { loop: true, align: "start", dragFree: true, active: !isDesktop },
@@ -161,15 +162,6 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
   useEffect(() => {
     if (emblaApi) emblaApi.reInit();
   }, [emblaApi, isDesktop]);
-
-  // Resume auto-scroll after any interaction (pointerUp fires before settle)
-  useEffect(() => {
-    if (!emblaApi) return;
-    const resume = () => autoScrollPlugin.play(0);
-    emblaApi.on("pointerUp", resume);
-    return () => { emblaApi.off("pointerUp", resume); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [emblaApi]);
 
   if (visible.length === 0) return null;
 

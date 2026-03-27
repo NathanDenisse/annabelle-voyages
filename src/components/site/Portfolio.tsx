@@ -175,12 +175,13 @@ export default function Portfolio({ items, content }: PortfolioProps) {
   const headerRef = useRef(null);
   const isInView = useInView(headerRef, { once: true, margin: "-80px" });
 
-  const autoScrollPlugin = AutoScroll({
+  // Stable plugin reference — must not be recreated on re-renders
+  const autoScrollPlugin = useRef(AutoScroll({
     speed: 1.2,
     stopOnInteraction: false,
     stopOnMouseEnter: false,
     startDelay: 0,
-  });
+  })).current;
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     { loop: true, align: "start", dragFree: true, active: !isDesktop },
@@ -195,15 +196,6 @@ export default function Portfolio({ items, content }: PortfolioProps) {
   useEffect(() => {
     if (emblaApi) emblaApi.reInit();
   }, [activeCategory, emblaApi, isDesktop]);
-
-  // Resume auto-scroll after any interaction (pointerUp fires before settle)
-  useEffect(() => {
-    if (!emblaApi) return;
-    const resume = () => autoScrollPlugin.play(0);
-    emblaApi.on("pointerUp", resume);
-    return () => { emblaApi.off("pointerUp", resume); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [emblaApi]);
 
   const selectedGallery = selectedItem ? buildGallery(selectedItem) : [];
 
