@@ -23,14 +23,10 @@ export default function Hero({ content, socials }: HeroProps) {
   const { lang } = useLanguage();
   const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
 
   const videoUrl = content.heroVideoUrl || null;
 
-  // ── Autoplay fiable Safari iOS ──
-  // Ne jamais appeler video.load() — cela remet la vidéo en état vierge et Safari
-  // bloque le play() suivant sans geste utilisateur. À la place, on laisse React
-  // mettre à jour l'attribut src via la prop JSX (comportement natif du browser),
-  // et on appelle play() en backup.
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !videoUrl) return;
@@ -40,44 +36,48 @@ export default function Hero({ content, socials }: HeroProps) {
       video.play().catch(() => {});
     };
 
-    // Tentative immédiate
     tryPlay();
-    // Retry 500ms
     const t1 = setTimeout(tryPlay, 500);
-    // Retry 1.5s
     const t2 = setTimeout(tryPlay, 1500);
 
-    // Retour d'onglet ou déverrouillage écran
     const onVisibility = () => {
       if (document.visibilityState === "visible") tryPlay();
     };
     document.addEventListener("visibilitychange", onVisibility);
 
-    // Premier touch (Low Power Mode : dernier recours)
-    const onTouch = () => {
-      tryPlay();
-      document.removeEventListener("touchstart", onTouch);
-    };
-    document.addEventListener("touchstart", onTouch);
-
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       document.removeEventListener("visibilitychange", onVisibility);
-      document.removeEventListener("touchstart", onTouch);
     };
   }, [videoUrl]);
+
+  // Touch sur la section hero — force le play au premier contact (Low Power Mode)
+  useEffect(() => {
+    const section = sectionRef.current;
+    const video = videoRef.current;
+    if (!section || !video) return;
+
+    const onTouch = () => {
+      video.muted = true;
+      video.play().catch(() => {});
+    };
+
+    section.addEventListener("touchstart", onTouch, { passive: true });
+    return () => section.removeEventListener("touchstart", onTouch);
+  }, []);
 
   const scrollToPortfolio = () => {
     document.querySelector("#portfolio")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
-    <section className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden bg-[#1A1210]">
-      {/* ── Background ── */}
+    <section
+      ref={sectionRef}
+      className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden bg-[#1A1210]"
+    >
+      {/* ── Vidéo — fade-in indépendant du contenu texte ── */}
       <div className="absolute inset-0">
-        {/* src via prop React — le browser applique sa politique autoplay native (plus permissive
-            que load() programmatique). Toujours dans le DOM pour Safari iOS. */}
         <video
           ref={videoRef}
           id="hero-video"
@@ -91,16 +91,14 @@ export default function Hero({ content, socials }: HeroProps) {
           onCanPlay={() => setVideoReady(true)}
           onPlaying={() => setVideoReady(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
-            videoReady && videoUrl ? "opacity-100" : "opacity-0"
+            videoReady ? "opacity-100" : "opacity-0"
           }`}
         />
-
-        {/* Overlays — fade avec la vidéo */}
-        <div className={`absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/60 transition-opacity duration-[800ms] ease-out ${videoReady && videoUrl ? "opacity-100" : "opacity-0"}`} />
-        <div className={`absolute inset-0 bg-black/10 transition-opacity duration-[800ms] ease-out ${videoReady && videoUrl ? "opacity-100" : "opacity-0"}`} />
+        <div className={`absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/60 transition-opacity duration-[800ms] ease-out ${videoReady ? "opacity-100" : "opacity-0"}`} />
+        <div className={`absolute inset-0 bg-black/10 transition-opacity duration-[800ms] ease-out ${videoReady ? "opacity-100" : "opacity-0"}`} />
       </div>
 
-      {/* ── Content ── */}
+      {/* ── Contenu — toujours visible, jamais conditionné à videoReady ── */}
       <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
         <p className="font-sans text-xs text-white/50 uppercase tracking-[0.5em] mb-6 font-light">
           {lang === "fr" ? "Créatrice de contenu voyage" : "Travel content creator"}
