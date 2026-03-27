@@ -46,19 +46,21 @@ function TestimonialRow({
   const [textEn, setTextEn] = useState(item.text.en);
   const [roleFr, setRoleFr] = useState(item.role.fr);
   const [roleEn, setRoleEn] = useState(item.role.en);
+  const [rating, setRating] = useState(item.rating ?? 5);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
   const save = useCallback(
-    (tf: string, te: string, rf: string, re: string) => {
+    (tf: string, te: string, rf: string, re: string, r: number) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
         try {
           await updateTestimonial(item.id, {
             text: { fr: tf, en: te },
             role: { fr: rf, en: re },
+            rating: r,
           });
         } catch {
           toast.error("Erreur de sauvegarde.");
@@ -68,12 +70,21 @@ function TestimonialRow({
     [item.id]
   );
 
+  const handleRating = async (r: number) => {
+    setRating(r);
+    try {
+      await updateTestimonial(item.id, { rating: r });
+    } catch {
+      toast.error("Erreur de sauvegarde.");
+    }
+  };
+
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
-  const handleTextFr = (v: string) => { setTextFr(v); save(v, textEn, roleFr, roleEn); };
-  const handleTextEn = (v: string) => { setTextEn(v); save(textFr, v, roleFr, roleEn); };
-  const handleRoleFr = (v: string) => { setRoleFr(v); save(textFr, textEn, v, roleEn); };
-  const handleRoleEn = (v: string) => { setRoleEn(v); save(textFr, textEn, roleFr, v); };
+  const handleTextFr = (v: string) => { setTextFr(v); save(v, textEn, roleFr, roleEn, rating); };
+  const handleTextEn = (v: string) => { setTextEn(v); save(textFr, v, roleFr, roleEn, rating); };
+  const handleRoleFr = (v: string) => { setRoleFr(v); save(textFr, textEn, v, roleEn, rating); };
+  const handleRoleEn = (v: string) => { setRoleEn(v); save(textFr, textEn, roleFr, v, rating); };
 
   // Translate FR → EN for text
   const translateText = async () => {
@@ -87,7 +98,7 @@ function TestimonialRow({
       const data = await res.json();
       if (data.translation) {
         setTextEn(data.translation);
-        save(textFr, data.translation, roleFr, roleEn);
+        save(textFr, data.translation, roleFr, roleEn, rating);
         toast.success("Texte traduit !");
       }
     } catch {
@@ -107,7 +118,7 @@ function TestimonialRow({
       const data = await res.json();
       if (data.translation) {
         setRoleEn(data.translation);
-        save(textFr, textEn, roleFr, data.translation);
+        save(textFr, textEn, roleFr, data.translation, rating);
         toast.success("Rôle traduit !");
       }
     } catch {
@@ -145,6 +156,31 @@ function TestimonialRow({
         >
           <Trash2 size={15} />
         </button>
+      </div>
+
+      {/* Rating */}
+      <div className="flex items-center gap-1.5 mb-4">
+        <span className="font-sans text-xs font-medium text-brown-500 uppercase tracking-wide mr-1">Note</span>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => handleRating(i + 1)}
+            className="p-0.5 hover:scale-110 transition-transform"
+            aria-label={`${i + 1} étoile${i > 0 ? "s" : ""}`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path
+                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                fill={i < rating ? "#D4A574" : "none"}
+                stroke="#D4A574"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        ))}
+        <span className="font-sans text-xs text-brown-400 ml-1">{rating}/5</span>
       </div>
 
       {/* Text bilingual */}
@@ -220,6 +256,7 @@ export default function TestimonialsAdmin() {
     await addTestimonial({
       text: { fr: "", en: "" },
       role: { fr: "", en: "" },
+      rating: 5,
       order: items.length,
       visible: true,
     });

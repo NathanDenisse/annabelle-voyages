@@ -114,6 +114,7 @@ export interface Testimonial {
   id: string;
   text: LocalizedText;
   role: LocalizedText;
+  rating: number;
   order: number;
   visible: boolean;
   createdAt?: Date;
