@@ -161,6 +161,11 @@ input:focus, textarea:focus, select:focus {
   outline: none;
 }
 
+/* Cache le bouton play natif Safari sur les vidéos en autoplay */
+video::-webkit-media-controls { display: none !important; }
+video::-webkit-media-controls-start-playback-button { display: none !important; }
+video::-webkit-media-controls-panel { display: none !important; }
+
 @layer utilities {
   .text-balance { text-wrap: balance; }
 }

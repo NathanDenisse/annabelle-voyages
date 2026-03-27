@@ -26,18 +26,51 @@ export default function Hero({ content, socials }: HeroProps) {
 
   const videoUrl = content.heroVideoUrl || null;
 
-  // Toujours présent dans le DOM dès le premier render — Safari iOS autorise l'autoplay
-  // des éléments présents lors du chargement initial. Quand videoUrl arrive (async Firestore),
-  // on set le src et on force play() impérativement.
+  // ── Autoplay fiable Safari iOS ──
+  // Safari bloque parfois l'autoplay selon l'état réseau, Low Power Mode, ou retour d'onglet.
+  // Stratégie : plusieurs tentatives échelonnées + écoute des événements de reprise.
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !videoUrl) return;
-    video.muted = true;
+
+    const tryPlay = () => {
+      video.muted = true;
+      video.play().catch(() => {});
+    };
+
+    // Charger la source si nécessaire
     if (video.src !== videoUrl) {
       video.src = videoUrl;
       video.load();
     }
-    video.play().catch(() => {});
+
+    // Tentative immédiate
+    tryPlay();
+
+    // Retry 500ms — Safari a parfois besoin d'un délai après load()
+    const t1 = setTimeout(tryPlay, 500);
+    // Retry 1.5s — dernier recours avant fallback fond sombre
+    const t2 = setTimeout(tryPlay, 1500);
+
+    // Retour d'onglet ou déverrouillage écran
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") tryPlay();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    // Premier touch — Safari autorise le play après interaction utilisateur
+    const onTouch = () => {
+      tryPlay();
+      document.removeEventListener("touchstart", onTouch);
+    };
+    document.addEventListener("touchstart", onTouch);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("touchstart", onTouch);
+    };
   }, [videoUrl]);
 
   const scrollToPortfolio = () => {
@@ -48,22 +81,24 @@ export default function Hero({ content, socials }: HeroProps) {
     <section className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden bg-[#1A1210]">
       {/* ── Background ── */}
       <div className="absolute inset-0">
-        {/* <video> toujours dans le DOM — src setter via useEffect */}
+        {/* Toujours dans le DOM — src géré via useEffect pour Safari iOS */}
         <video
           ref={videoRef}
+          id="hero-video"
           autoPlay
           muted
           loop
           playsInline
-          preload="none"
+          preload="auto"
           {...{ "webkit-playsinline": "true" }}
           onCanPlay={() => setVideoReady(true)}
+          onPlaying={() => setVideoReady(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
             videoReady && videoUrl ? "opacity-100" : "opacity-0"
           }`}
         />
 
-        {/* Overlays */}
+        {/* Overlays — fade avec la vidéo */}
         <div className={`absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/60 transition-opacity duration-[800ms] ease-out ${videoReady && videoUrl ? "opacity-100" : "opacity-0"}`} />
         <div className={`absolute inset-0 bg-black/10 transition-opacity duration-[800ms] ease-out ${videoReady && videoUrl ? "opacity-100" : "opacity-0"}`} />
       </div>
