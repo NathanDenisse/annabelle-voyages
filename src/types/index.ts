@@ -110,6 +110,16 @@ export interface HeroMedia {
   updatedAt?: Date;
 }
 
+export interface Testimonial {
+  id: string;
+  text: LocalizedText;
+  role: LocalizedText;
+  order: number;
+  visible: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 // Admin form types
 export interface PortfolioItemForm {
   title: LocalizedText;

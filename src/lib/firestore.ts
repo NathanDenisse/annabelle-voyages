@@ -23,6 +23,7 @@ import {
   PortfolioItem,
   Partnership,
   ContactMessage,
+  Testimonial,
 } from "@/types";
 
 // Collection names
@@ -34,6 +35,7 @@ export const COLLECTIONS = {
   MESSAGES: "messages",
   HERO: "hero",
   STORAGE_TRACKING: "storage_tracking",
+  TESTIMONIALS: "testimonials",
 } as const;
 
 // --- Helpers ---
@@ -236,6 +238,44 @@ export async function getUnreadMessagesCount(): Promise<number> {
   );
   const snap = await getDocs(q);
   return snap.size;
+}
+
+// --- Testimonials ---
+export function onTestimonialsChange(callback: (items: Testimonial[]) => void) {
+  return onSnapshot(collection(db, COLLECTIONS.TESTIMONIALS), (snap: QuerySnapshot) => {
+    const items = snap.docs.map((d) => ({
+      id: d.id,
+      ...fromTimestamp(d.data()),
+    })) as Testimonial[];
+    items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    callback(items);
+  });
+}
+
+export async function addTestimonial(data: Omit<Testimonial, "id">): Promise<string> {
+  const ref = await addDoc(collection(db, COLLECTIONS.TESTIMONIALS), {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function updateTestimonial(id: string, data: Partial<Testimonial>): Promise<void> {
+  await updateDoc(doc(db, COLLECTIONS.TESTIMONIALS, id), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteTestimonial(id: string): Promise<void> {
+  await deleteDoc(doc(db, COLLECTIONS.TESTIMONIALS, id));
+}
+
+export async function updateTestimonialOrder(items: { id: string; order: number }[]): Promise<void> {
+  await Promise.all(items.map(({ id, order }) =>
+    updateDoc(doc(db, COLLECTIONS.TESTIMONIALS, id), { order })
+  ));
 }
 
 // --- Storage Tracking ---

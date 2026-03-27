@@ -8,6 +8,8 @@ import {
   onPartnershipsChange,
   onMessagesChange,
   onStorageTrackingChange,
+  onTestimonialsChange,
+  addTestimonial,
 } from "@/lib/firestore";
 import {
   SiteContent,
@@ -16,6 +18,7 @@ import {
   PortfolioItem,
   Partnership,
   ContactMessage,
+  Testimonial,
 } from "@/types";
 import { defaultContent, statsLabels } from "@/lib/i18n";
 
@@ -120,6 +123,75 @@ export function usePartnerships() {
   }, []);
 
   return { items: items.length > 0 ? items : defaultPartnerships, loading };
+}
+
+const seedTestimonials: Omit<Testimonial, "id">[] = [
+  {
+    text: {
+      fr: "Une créatrice passionnée qui sublime chaque lieu qu'elle visite. Ses contenus ont dépassé toutes nos attentes.",
+      en: "A passionate creator who elevates every place she visits. Her content exceeded all our expectations.",
+    },
+    role: { fr: "Partenaire hôtelier", en: "Hotel partner" },
+    order: 0,
+    visible: true,
+  },
+  {
+    text: {
+      fr: "Annabelle a su capturer l'essence de notre établissement avec authenticité et élégance.",
+      en: "Annabelle captured the essence of our establishment with authenticity and elegance.",
+    },
+    role: { fr: "Resort & Spa", en: "Resort & Spa" },
+    order: 1,
+    visible: true,
+  },
+  {
+    text: {
+      fr: "Une collaboration fluide et un résultat magnifique. Les retours de notre communauté ont été incroyables.",
+      en: "A seamless collaboration with a magnificent result. The feedback from our community has been incredible.",
+    },
+    role: { fr: "Marque lifestyle", en: "Lifestyle brand" },
+    order: 2,
+    visible: true,
+  },
+  {
+    text: {
+      fr: "Son regard unique et sa sensibilité artistique font toute la différence. Un vrai plaisir de travailler ensemble.",
+      en: "Her unique perspective and artistic sensitivity make all the difference. A true pleasure to work together.",
+    },
+    role: { fr: "Office de tourisme", en: "Tourism board" },
+    order: 3,
+    visible: true,
+  },
+  {
+    text: {
+      fr: "Des vidéos immersives qui donnent instantanément envie de réserver. Exactement ce qu'on recherchait.",
+      en: "Immersive videos that instantly make you want to book. Exactly what we were looking for.",
+    },
+    role: { fr: "Agence de voyage", en: "Travel agency" },
+    order: 4,
+    visible: true,
+  },
+];
+
+export function useTestimonials() {
+  const [items, setItems] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
+  const seeded = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onTestimonialsChange((data) => {
+      if (data.length === 0 && !seeded[0]) {
+        seeded[1](true);
+        Promise.all(seedTestimonials.map((t) => addTestimonial(t))).catch(() => {});
+      }
+      setItems(data);
+      setLoading(false);
+    });
+    return unsubscribe;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return { items, loading };
 }
 
 export function useMessages() {

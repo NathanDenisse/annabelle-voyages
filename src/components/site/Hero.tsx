@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Instagram, Youtube, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
@@ -24,29 +24,29 @@ export default function Hero({ content, socials, onReady }: HeroProps) {
   const { lang } = useLanguage();
   const [videoReady, setVideoReady] = useState(false);
   const firedRef = useRef(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const videoUrl = content.heroVideoUrl || null;
 
-  useEffect(() => {
-    // 2s fallback — déclenche le fade-in global si la vidéo tarde
-    const fallback = setTimeout(() => {
-      if (!firedRef.current) {
-        firedRef.current = true;
-        setVideoReady(true);
-        onReady?.();
-      }
-    }, 2000);
-    return () => clearTimeout(fallback);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleVideoReady = () => {
+  const fireReady = useCallback(() => {
     if (!firedRef.current) {
       firedRef.current = true;
       setVideoReady(true);
       onReady?.();
     }
-  };
+  }, [onReady]);
+
+  useEffect(() => {
+    // Force play on mobile (Safari iOS requires programmatic play after muted)
+    const video = videoRef.current;
+    if (video) {
+      video.muted = true;
+      video.play().catch(() => {});
+    }
+    // 2s fallback — déclenche le fade-in global si la vidéo tarde
+    const fallback = setTimeout(fireReady, 2000);
+    return () => clearTimeout(fallback);
+  }, [fireReady]);
 
   const scrollToPortfolio = () => {
     document.querySelector("#portfolio")?.scrollIntoView({ behavior: "smooth" });
@@ -58,13 +58,16 @@ export default function Hero({ content, socials, onReady }: HeroProps) {
       <div className="absolute inset-0">
         {videoUrl && (
           <video
+            ref={videoRef}
+            id="hero-video"
             src={videoUrl}
             autoPlay
             muted
             loop
             playsInline
             preload="auto"
-            onCanPlay={handleVideoReady}
+            {...{ "webkit-playsinline": "true" }}
+            onCanPlay={fireReady}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
               videoReady ? "opacity-100" : "opacity-0"
             }`}
