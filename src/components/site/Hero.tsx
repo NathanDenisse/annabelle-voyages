@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Instagram, Youtube, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
@@ -22,17 +22,23 @@ function TikTokIcon({ size = 20 }: { size?: number }) {
 export default function Hero({ content, socials }: HeroProps) {
   const { lang } = useLanguage();
   const [videoReady, setVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const videoUrl = content.heroVideoUrl || null;
 
-  // Callback ref — s'exécute au moment exact où l'élément <video> monte dans le DOM
-  // Crucial pour Safari iOS : force le play même quand videoUrl arrive async depuis Firestore
-  const videoCallbackRef = useCallback((node: HTMLVideoElement | null) => {
-    if (node) {
-      node.muted = true;
-      node.play().catch(() => {});
+  // Toujours présent dans le DOM dès le premier render — Safari iOS autorise l'autoplay
+  // des éléments présents lors du chargement initial. Quand videoUrl arrive (async Firestore),
+  // on set le src et on force play() impérativement.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !videoUrl) return;
+    video.muted = true;
+    if (video.src !== videoUrl) {
+      video.src = videoUrl;
+      video.load();
     }
-  }, []);
+    video.play().catch(() => {});
+  }, [videoUrl]);
 
   const scrollToPortfolio = () => {
     document.querySelector("#portfolio")?.scrollIntoView({ behavior: "smooth" });
@@ -42,26 +48,24 @@ export default function Hero({ content, socials }: HeroProps) {
     <section className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden bg-[#1A1210]">
       {/* ── Background ── */}
       <div className="absolute inset-0">
-        {videoUrl && (
-          <video
-            ref={videoCallbackRef}
-            src={videoUrl}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            {...{ "webkit-playsinline": "true" }}
-            onCanPlay={() => setVideoReady(true)}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
-              videoReady ? "opacity-100" : "opacity-0"
-            }`}
-          />
-        )}
+        {/* <video> toujours dans le DOM — src setter via useEffect */}
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="none"
+          {...{ "webkit-playsinline": "true" }}
+          onCanPlay={() => setVideoReady(true)}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
+            videoReady && videoUrl ? "opacity-100" : "opacity-0"
+          }`}
+        />
 
         {/* Overlays */}
-        <div className={`absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/60 transition-opacity duration-[800ms] ease-out ${videoReady ? "opacity-100" : "opacity-0"}`} />
-        <div className={`absolute inset-0 bg-black/10 transition-opacity duration-[800ms] ease-out ${videoReady ? "opacity-100" : "opacity-0"}`} />
+        <div className={`absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/60 transition-opacity duration-[800ms] ease-out ${videoReady && videoUrl ? "opacity-100" : "opacity-0"}`} />
+        <div className={`absolute inset-0 bg-black/10 transition-opacity duration-[800ms] ease-out ${videoReady && videoUrl ? "opacity-100" : "opacity-0"}`} />
       </div>
 
       {/* ── Content ── */}
