@@ -62,7 +62,7 @@ export default function About({ content, aboutImageUrl, socials }: AboutProps) {
             <div className={`absolute -bottom-5 -right-4 md:-right-8 bg-white rounded-2xl px-5 py-3 shadow-xl border border-blush-100 -rotate-6 transition-all duration-500 delay-300 ${
               isInView ? "opacity-100 scale-100" : "opacity-0 scale-90"
             }`}>
-              <p className="font-script text-2xl text-terracotta-500">Dublin, Ireland</p>
+              <p className="font-script text-2xl text-terracotta-500">Santorini, Greece ✈</p>
             </div>
           </div>
 
