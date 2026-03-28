@@ -28,9 +28,9 @@ import {
   updatePortfolioOrder,
 } from "@/lib/firestore";
 import { PortfolioItem, MediaCategory, MediaItem, CATEGORY_LABELS } from "@/types";
-import { getYouTubeThumbnail, deleteFileByUrl, uploadVideo } from "@/lib/storage";
+import { getYouTubeId, deleteFileByUrl } from "@/lib/storage";
 import SmartBilingualField from "@/components/admin/SmartBilingualField";
-import MediaUploader from "@/components/admin/MediaUploader";
+import CoverEditor from "@/components/admin/CoverEditor";
 import GalleryEditor from "@/components/admin/GalleryEditor";
 import SortableItem from "@/components/admin/SortableItem";
 import toast from "react-hot-toast";
@@ -42,12 +42,7 @@ const emptyForm = {
   location: "",
   category: "hotel" as MediaCategory,
   description: { fr: "", en: "" },
-  type: "image" as "image" | "video",
-  imageUrl: "",
-  thumbnailUrl: "",
-  videoUrl: "",
-  mp4VideoUrl: "",
-  videoSource: "youtube" as "youtube" | "mp4",
+  cover: null as MediaItem | null,
   gallery: [] as MediaItem[],
   visible: true,
 };
@@ -56,7 +51,7 @@ export default function PortfolioAdmin() {
   const { items } = usePortfolio();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(typeof emptyForm === "object" ? { ...emptyForm } : emptyForm);
+  const [form, setForm] = useState({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -68,12 +63,10 @@ export default function PortfolioAdmin() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-
     const oldIndex = items.findIndex((i) => i.id === active.id);
     const newIndex = items.findIndex((i) => i.id === over.id);
     const reordered = arrayMove(items, oldIndex, newIndex);
-    const updates = reordered.map((item, idx) => ({ id: item.id, order: idx }));
-    await updatePortfolioOrder(updates);
+    await updatePortfolioOrder(reordered.map((item, idx) => ({ id: item.id, order: idx })));
   };
 
   const openAdd = () => {
@@ -83,18 +76,14 @@ export default function PortfolioAdmin() {
   };
 
   const openEdit = (item: PortfolioItem) => {
+    const fullGallery = item.gallery || [];
     setForm({
       title: item.title,
       location: item.location,
       category: item.category,
       description: item.description,
-      type: item.type,
-      imageUrl: item.imageUrl || "",
-      thumbnailUrl: item.thumbnailUrl || "",
-      videoUrl: item.videoUrl || "",
-      mp4VideoUrl: item.mp4VideoUrl || "",
-      videoSource: item.mp4VideoUrl ? "mp4" : "youtube",
-      gallery: item.gallery || [],
+      cover: fullGallery[0] || null,
+      gallery: fullGallery.slice(1),
       visible: item.visible,
     });
     setEditingId(item.id);
@@ -106,33 +95,36 @@ export default function PortfolioAdmin() {
       toast.error("Le titre FR est requis.");
       return;
     }
-    if (form.type === "video" && !form.videoUrl) {
-      toast.error("L'URL vidéo est requise.");
-      return;
-    }
-    if (form.type === "image" && !form.imageUrl) {
-      toast.error("Une image est requise.");
-      return;
-    }
 
     setSaving(true);
     try {
-      // Firestore rejects `undefined` values — conditionally include fields
-      const base = {
+      const fullGallery: MediaItem[] = form.cover
+        ? [form.cover, ...form.gallery]
+        : form.gallery;
+
+      // Derive legacy fields from cover for backward compat
+      const cover = form.cover;
+      const imageUrl = cover?.type === "image" ? cover.url : "";
+      const mp4VideoUrl = cover?.platform === "mp4" ? cover.url : "";
+      const videoUrl = cover?.platform === "youtube" ? cover.url : "";
+      const type: "image" | "video" = cover?.type === "video" ? "video" : "image";
+
+      const data = {
         title: form.title,
         location: form.location,
         category: form.category,
         description: form.description,
-        type: form.type,
+        type,
+        imageUrl,
+        thumbnailUrl: "",
+        mp4VideoUrl,
+        videoUrl,
+        gallery: fullGallery,
         visible: form.visible,
-        order: editingId ? (items.find((i) => i.id === editingId)?.order ?? items.length) : items.length,
+        order: editingId
+          ? (items.find((i) => i.id === editingId)?.order ?? items.length)
+          : items.length,
       };
-      const videoData = form.videoSource === "mp4"
-        ? { mp4VideoUrl: form.mp4VideoUrl, videoUrl: "" }
-        : { videoUrl: form.videoUrl, mp4VideoUrl: "" };
-      const data = form.type === "image"
-        ? { ...base, imageUrl: form.imageUrl, thumbnailUrl: form.thumbnailUrl, gallery: form.gallery }
-        : { ...base, ...videoData, gallery: form.gallery };
 
       if (editingId) {
         await updatePortfolioItem(editingId, data);
@@ -145,11 +137,7 @@ export default function PortfolioAdmin() {
       setEditingId(null);
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };
-      console.error("[Portfolio] Erreur sauvegarde Firestore:", {
-        code: err?.code,
-        message: err?.message,
-        raw: error,
-      });
+      console.error("[Portfolio] Erreur sauvegarde:", err);
       toast.error("Erreur lors de la sauvegarde.");
     } finally {
       setSaving(false);
@@ -160,20 +148,13 @@ export default function PortfolioAdmin() {
     try {
       const item = items.find((i) => i.id === id);
       if (item) {
-        // Delete media files from Firebase Storage
         if (item.imageUrl) await deleteFileByUrl(item.imageUrl);
         if (item.thumbnailUrl) await deleteFileByUrl(item.thumbnailUrl);
       }
       await deletePortfolioItem(id);
       toast.success("Média supprimé.");
       setDeleteConfirm(null);
-    } catch (error: unknown) {
-      const err = error as { code?: string; message?: string };
-      console.error("[Portfolio] Erreur suppression:", {
-        code: err?.code,
-        message: err?.message,
-        raw: error,
-      });
+    } catch {
       toast.error("Erreur lors de la suppression.");
     }
   };
@@ -183,9 +164,26 @@ export default function PortfolioAdmin() {
     toast.success(item.visible ? "Masqué" : "Visible");
   };
 
-  const getThumbnail = (item: PortfolioItem) => {
-    if (item.type === "video" && item.videoUrl) return getYouTubeThumbnail(item.videoUrl);
+  const getListThumbnail = (item: PortfolioItem) => {
+    const first = item.gallery?.[0];
+    if (first?.type === "image") return first.url;
+    if (first?.platform === "youtube") {
+      const id = getYouTubeId(first.url);
+      if (id) return `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+    }
+    if (item.videoUrl) {
+      const id = getYouTubeId(item.videoUrl);
+      if (id) return `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+    }
     return item.thumbnailUrl || item.imageUrl || "/images/placeholders/portfolio.svg";
+  };
+
+  const getListBadge = (item: PortfolioItem) => {
+    const first = item.gallery?.[0];
+    if (first?.platform === "mp4") return "MP4";
+    if (first?.platform === "youtube") return "YT";
+    if (first?.type === "image") return "Photo";
+    return null;
   };
 
   return (
@@ -225,12 +223,26 @@ export default function PortfolioAdmin() {
                   >
                     {/* Thumbnail */}
                     <div className="relative w-20 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-blush-100">
-                      <Image src={getThumbnail(item)} alt={item.title.fr} fill className="object-cover" />
-                      {item.type === "video" && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                          <div className="w-6 h-6 rounded-full bg-white/80 flex items-center justify-center">
-                            <div className="w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[7px] border-l-brown-700 ml-0.5" />
-                          </div>
+                      {item.gallery?.[0]?.platform === "mp4" ? (
+                        <video
+                          src={item.gallery[0].url}
+                          className="w-full h-full object-cover"
+                          muted
+                          autoPlay
+                          loop
+                          playsInline
+                        />
+                      ) : (
+                        <Image
+                          src={getListThumbnail(item)}
+                          alt={item.title.fr}
+                          fill
+                          className="object-cover"
+                        />
+                      )}
+                      {getListBadge(item) && (
+                        <div className="absolute bottom-0.5 right-0.5 bg-black/60 text-white text-[9px] px-1 py-0.5 rounded font-sans font-medium">
+                          {getListBadge(item)}
                         </div>
                       )}
                     </div>
@@ -242,6 +254,12 @@ export default function PortfolioAdmin() {
                         <span className="font-sans text-xs text-brown-400">{item.location}</span>
                         <span className="text-brown-200">·</span>
                         <span className="font-sans text-xs text-terracotta-400">{CATEGORY_LABELS[item.category].fr}</span>
+                        {item.gallery && item.gallery.length > 1 && (
+                          <>
+                            <span className="text-brown-200">·</span>
+                            <span className="font-sans text-xs text-brown-400">{item.gallery.length} médias</span>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -269,23 +287,19 @@ export default function PortfolioAdmin() {
         </DndContext>
       )}
 
-      {/* Delete confirm modal */}
+      {/* Delete confirm */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
             <h3 className="font-serif text-lg font-medium text-brown-900 mb-2">Confirmer la suppression</h3>
             <p className="font-sans text-sm text-brown-500 mb-6">Cette action est irréversible.</p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="flex-1 py-2.5 border border-blush-200 rounded-xl font-sans text-sm text-brown-600 hover:bg-blush-100"
-              >
+              <button onClick={() => setDeleteConfirm(null)}
+                className="flex-1 py-2.5 border border-blush-200 rounded-xl font-sans text-sm text-brown-600 hover:bg-blush-100">
                 Annuler
               </button>
-              <button
-                onClick={() => handleDelete(deleteConfirm)}
-                className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-sans text-sm font-medium"
-              >
+              <button onClick={() => handleDelete(deleteConfirm)}
+                className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-sans text-sm font-medium">
                 Supprimer
               </button>
             </div>
@@ -296,112 +310,107 @@ export default function PortfolioAdmin() {
       {/* Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center sm:p-4">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
-            {/* Modal header */}
-            <div className="flex items-center justify-between p-6 border-b border-blush-100 sticky top-0 bg-white rounded-t-2xl">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-blush-100 sticky top-0 bg-white rounded-t-2xl z-10">
               <h3 className="font-serif text-lg font-medium text-brown-900">
                 {editingId ? "Modifier le média" : "Ajouter un média"}
               </h3>
-              <button
-                onClick={() => setShowForm(false)}
-                className="p-2 rounded-xl hover:bg-blush-100 text-brown-400"
-              >
+              <button onClick={() => setShowForm(false)} className="p-2 rounded-xl hover:bg-blush-100 text-brown-400">
                 <X size={18} />
               </button>
             </div>
 
-            {/* Form */}
-            <div className="p-6 space-y-5">
-              {/* Media upload */}
-              <div>
-                <label className="block font-sans text-sm font-medium text-brown-700 mb-2">Média</label>
-                <MediaUploader
-                  type={form.type}
-                  onTypeChange={(t) => setForm({ ...form, type: t })}
-                  imagePreview={form.imageUrl}
-                  videoUrl={form.videoUrl}
-                  onImageUpload={(url, thumb) => setForm({ ...form, imageUrl: url, thumbnailUrl: thumb })}
-                  onVideoUrlChange={(url) => setForm({ ...form, videoUrl: url })}
+            <div className="p-5 space-y-6">
+
+              {/* ── Section 1: Cover ── */}
+              <div className="bg-blush-50 rounded-2xl p-4">
+                <CoverEditor
+                  item={form.cover}
+                  onChange={(cover) => setForm({ ...form, cover })}
                   storagePath={`portfolio/${Date.now()}`}
                 />
               </div>
 
-              {/* Gallery */}
-              <GalleryEditor
-                items={form.gallery}
-                onChange={(gallery) => setForm({ ...form, gallery })}
-                storagePath={`portfolio/gallery/${Date.now()}`}
-              />
-
-              {/* Title */}
-              <SmartBilingualField
-                label="Titre"
-                valueFr={form.title.fr}
-                valueEn={form.title.en}
-                onChangeFr={(v) => setForm({ ...form, title: { ...form.title, fr: v } })}
-                onChangeEn={(v) => setForm({ ...form, title: { ...form.title, en: v } })}
-                context={{ location: form.location, category: form.category, type: "portfolio" }}
-              />
-
-              {/* Location + Category */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-sans text-xs font-medium text-brown-600 mb-1">Lieu</label>
-                  <input
-                    value={form.location}
-                    onChange={(e) => setForm({ ...form, location: e.target.value })}
-                    className="w-full bg-cream-100 border border-blush-200 rounded-xl px-3 py-2.5 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors"
-                    placeholder="Paris, France"
-                  />
-                </div>
-                <div>
-                  <label className="block font-sans text-xs font-medium text-brown-600 mb-1">Catégorie</label>
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value as MediaCategory })}
-                    className="w-full bg-cream-100 border border-blush-200 rounded-xl px-3 py-2.5 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors"
-                  >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {CATEGORY_LABELS[cat].fr}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* ── Section 2: Gallery ── */}
+              <div className="bg-blush-50 rounded-2xl p-4">
+                <GalleryEditor
+                  items={form.gallery}
+                  onChange={(gallery) => setForm({ ...form, gallery })}
+                  storagePath={`portfolio/gallery/${Date.now()}`}
+                />
               </div>
 
-              {/* Description */}
-              <SmartBilingualField
-                label="Description"
-                valueFr={form.description.fr}
-                valueEn={form.description.en}
-                onChangeFr={(v) => setForm({ ...form, description: { ...form.description, fr: v } })}
-                onChangeEn={(v) => setForm({ ...form, description: { ...form.description, en: v } })}
-                multiline
-                context={{ title: form.title.fr, location: form.location, category: form.category, type: "portfolio" }}
-              />
+              {/* ── Section 3: Text info ── */}
+              <div className="space-y-4">
+                <p className="font-sans text-xs font-semibold text-brown-400 uppercase tracking-wider">
+                  Informations
+                </p>
 
-              {/* Visible toggle */}
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setForm({ ...form, visible: !form.visible })}
-                  className={`relative w-10 h-6 rounded-full transition-colors duration-200 ${
-                    form.visible ? "bg-terracotta-500" : "bg-blush-200"
-                  }`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
-                    form.visible ? "translate-x-5" : "translate-x-1"
-                  }`} />
-                </button>
-                <span className="font-sans text-sm text-brown-600">
-                  {form.visible ? "Visible sur le site" : "Masqué"}
-                </span>
+                <SmartBilingualField
+                  label="Titre"
+                  valueFr={form.title.fr}
+                  valueEn={form.title.en}
+                  onChangeFr={(v) => setForm({ ...form, title: { ...form.title, fr: v } })}
+                  onChangeEn={(v) => setForm({ ...form, title: { ...form.title, en: v } })}
+                  context={{ location: form.location, category: form.category, type: "portfolio" }}
+                />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-sans text-xs font-medium text-brown-600 mb-1">Lieu</label>
+                    <input
+                      value={form.location}
+                      onChange={(e) => setForm({ ...form, location: e.target.value })}
+                      className="w-full bg-cream-100 border border-blush-200 rounded-xl px-3 py-2.5 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors"
+                      placeholder="Paris, France"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-sans text-xs font-medium text-brown-600 mb-1">Catégorie</label>
+                    <select
+                      value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value as MediaCategory })}
+                      className="w-full bg-cream-100 border border-blush-200 rounded-xl px-3 py-2.5 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors"
+                    >
+                      {CATEGORIES.map((cat) => (
+                        <option key={cat} value={cat}>{CATEGORY_LABELS[cat].fr}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <SmartBilingualField
+                  label="Description"
+                  valueFr={form.description.fr}
+                  valueEn={form.description.en}
+                  onChangeFr={(v) => setForm({ ...form, description: { ...form.description, fr: v } })}
+                  onChangeEn={(v) => setForm({ ...form, description: { ...form.description, en: v } })}
+                  multiline
+                  context={{ title: form.title.fr, location: form.location, category: form.category, type: "portfolio" }}
+                />
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, visible: !form.visible })}
+                    className={`relative w-10 h-6 rounded-full transition-colors duration-200 ${
+                      form.visible ? "bg-terracotta-500" : "bg-blush-200"
+                    }`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                      form.visible ? "translate-x-5" : "translate-x-1"
+                    }`} />
+                  </button>
+                  <span className="font-sans text-sm text-brown-600">
+                    {form.visible ? "Visible sur le site" : "Masqué"}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Save button */}
-            <div className="p-6 pt-0">
+            {/* Save */}
+            <div className="p-5 pt-0 sticky bottom-0 bg-white border-t border-blush-100">
               <button
                 onClick={handleSave}
                 disabled={saving}
