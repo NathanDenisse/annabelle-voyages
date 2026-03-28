@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { Upload, Film, Video, Trash2, X } from "lucide-react";
-import { uploadSingleImage, uploadVideo, getYouTubeId } from "@/lib/storage";
+import { uploadSingleImage, uploadVideo, getYouTubeId, detectVideoSource } from "@/lib/storage";
 import { MediaItem } from "@/types";
 import toast from "react-hot-toast";
 
@@ -69,6 +69,17 @@ export default function CoverEditor({ item, onChange, storagePath }: CoverEditor
 
   const ytId = item?.platform === "youtube" ? getYouTubeId(item.url) : null;
 
+  // Determine preview aspect class based on content type
+  const previewAspect = !item
+    ? "aspect-video"
+    : item.type === "image"
+    ? "" // natural image ratio — no fixed aspect
+    : item.platform === "mp4"
+    ? "" // natural video ratio — no fixed aspect
+    : detectVideoSource(item.url) === "youtube-short"
+    ? "aspect-[9/16] max-h-72 mx-auto"
+    : "aspect-video";
+
   return (
     <div>
       <div className="mb-2">
@@ -80,17 +91,18 @@ export default function CoverEditor({ item, onChange, storagePath }: CoverEditor
         </p>
       </div>
 
-      {/* Preview 16:9 */}
-      <div className="relative aspect-video rounded-xl overflow-hidden bg-blush-100 mb-3">
+      {/* Preview — format-aware */}
+      <div className={`relative rounded-xl overflow-hidden bg-blush-100 mb-3 ${previewAspect}`}>
         {item ? (
           <>
             {item.type === "image" && (
-              <Image src={item.url} alt="Couverture" fill className="object-cover" />
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.url} alt="Couverture" className="w-full h-auto block" />
             )}
             {item.platform === "mp4" && (
               <video
                 src={item.url}
-                className="w-full h-full object-cover"
+                className="w-full h-auto block"
                 muted
                 autoPlay
                 loop
@@ -106,35 +118,23 @@ export default function CoverEditor({ item, onChange, storagePath }: CoverEditor
               />
             )}
 
-            {/* Type badge */}
-            <div className="absolute top-2 left-2">
+            {/* Overlay controls (always on top) */}
+            <div className="absolute top-2 left-2 right-2 flex items-start justify-between pointer-events-none">
               <span className="font-sans text-[10px] font-medium bg-black/60 text-white px-2 py-0.5 rounded-full">
                 {item.type === "image" ? "📷 Photo" : item.platform === "mp4" ? "🎬 MP4" : "▶️ YouTube"}
               </span>
-            </div>
-
-            {/* Remove */}
-            <button
-              type="button"
-              onClick={() => onChange(null)}
-              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 hover:bg-red-500 text-white transition-colors"
-              title="Supprimer la couverture"
-            >
-              <Trash2 size={12} />
-            </button>
-
-            {/* Overlay to replace */}
-            <div
-              className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 hover:opacity-100 cursor-pointer gap-2"
-              onClick={() => photoRef.current?.click()}
-            >
-              <span className="font-sans text-xs text-white font-medium bg-black/60 px-3 py-1.5 rounded-full">
-                Changer
-              </span>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onChange(null); }}
+                className="pointer-events-auto p-1.5 rounded-full bg-black/60 hover:bg-red-500 text-white transition-colors"
+                title="Supprimer la couverture"
+              >
+                <Trash2 size={12} />
+              </button>
             </div>
           </>
         ) : uploading ? (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+          <div className="aspect-video flex flex-col items-center justify-center gap-3">
             <div className="w-8 h-8 border-2 border-terracotta-300 border-t-terracotta-500 rounded-full animate-spin" />
             {progress > 0 && (
               <>
@@ -149,7 +149,7 @@ export default function CoverEditor({ item, onChange, storagePath }: CoverEditor
             )}
           </div>
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-brown-300">
+          <div className="aspect-video flex flex-col items-center justify-center gap-2 text-brown-300">
             <Upload size={28} />
             <p className="font-sans text-sm">Aucune couverture</p>
           </div>

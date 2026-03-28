@@ -227,9 +227,13 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
               {visible.map((item) => {
-                const format = item.mp4VideoUrl ? "landscape" : getVideoFormat(item.videoUrl);
+                // Use gallery[0] first for format detection (consistent with card internals)
+                const first = item.gallery?.[0];
+                const format: VideoFormat = first?.type === "video"
+                  ? (first.platform === "mp4" ? "landscape" : getVideoFormat(first.url))
+                  : (item.mp4VideoUrl ? "landscape" : getVideoFormat(item.videoUrl));
                 return (
-                  <div key={item.id} className={`flex-none px-1.5 ${format === "short" ? "w-[62%]" : "w-[84%]"}`}>
+                  <div key={item.id} className={`flex-none px-1.5 ${format === "short" ? "w-[55%]" : "w-[84%]"}`}>
                     <PartnershipCard item={item} onClick={() => setSelectedPartnership(item)} />
                   </div>
                 );

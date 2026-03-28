@@ -281,7 +281,7 @@ export default function Portfolio({ items, content }: PortfolioProps) {
               {filtered.map((item) => {
                 const format = getCardFormat(item);
                 return (
-                  <div key={item.id} className={`flex-none px-1.5 ${format === "short" ? "w-[62%]" : "w-[84%]"}`}>
+                  <div key={item.id} className={`flex-none px-1.5 ${format === "short" ? "w-[55%]" : "w-[84%]"}`}>
                     <MediaCard item={item} lang={lang} format={format} onClick={() => setSelectedItem(item)} />
                   </div>
                 );
