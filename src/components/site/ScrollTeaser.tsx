@@ -22,14 +22,14 @@ export default function ScrollTeaser({ textFr, textEn, target, light = true }: S
     <button
       onClick={handleClick}
       aria-label={text}
-      className={`flex flex-col items-center gap-1.5 transition-opacity duration-300 ${
+      className={`flex flex-col items-center gap-1 transition-opacity duration-300 ${
         light
-          ? "text-brown-400 opacity-50 hover:opacity-90"
-          : "text-white/40 hover:text-white/70"
+          ? "text-brown-400 opacity-30 hover:opacity-60"
+          : "text-white/30 hover:text-white/60"
       }`}
     >
-      <span className="font-sans text-[10px] uppercase tracking-[0.3em]">{text}</span>
-      <ChevronDown size={14} className="animate-bounce" />
+      <span className="font-sans text-[10px] uppercase tracking-[0.3em] font-light">{text}</span>
+      <ChevronDown size={12} className="animate-bounce-subtle" />
     </button>
   );
 }

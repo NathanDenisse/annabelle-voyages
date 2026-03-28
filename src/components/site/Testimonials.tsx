@@ -124,7 +124,7 @@ export default function Testimonials({ items }: TestimonialsProps) {
   if (visible.length === 0) return null;
 
   return (
-    <section id="testimonials" className="relative py-12 md:py-16 bg-[#F8F0EB]">
+    <section id="testimonials" className="relative py-12 md:py-16 bg-[#FEFCF9]">
       {/* Header */}
       <div
         ref={headerRef}
@@ -155,9 +155,6 @@ export default function Testimonials({ items }: TestimonialsProps) {
       <div className="lg:hidden overflow-hidden">
         <MobileCarousel items={visible} lang={lang} />
       </div>
-
-      {/* Gradient transition → NextTrip */}
-      <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-b from-transparent to-[#0E7C7B] pointer-events-none" />
 
       {/* Teaser */}
       <div className="relative z-10 flex justify-center pt-10 pb-6">

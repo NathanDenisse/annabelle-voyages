@@ -20,6 +20,15 @@
   to { opacity: 1; }
 }
 
+/* ── Teaser chevron — bounce très subtil 2px ── */
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(2px); }
+}
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
+}
+
 /* ── Infinite carousel scroll (CSS GPU) ── */
 @keyframes carousel-scroll {
   from { transform: translateX(0); }

@@ -128,8 +128,6 @@ export default function NextTrip({ data }: NextTripProps) {
         </div>
       </div>
 
-      {/* Gradient transition → Contact */}
-      <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-b from-transparent to-[#1A1210] pointer-events-none" />
     </section>
   );
 }

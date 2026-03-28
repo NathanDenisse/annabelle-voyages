@@ -252,9 +252,6 @@ export default function Portfolio({ items, content }: PortfolioProps) {
         </p>
       )}
 
-      {/* Gradient transition → Partnerships */}
-      <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-b from-transparent to-[#2C2220] pointer-events-none" />
-
       {/* Teaser */}
       <div className="relative z-10 flex justify-center pt-10 pb-6">
         <ScrollTeaser textFr="Ils m'ont fait confiance ↓" textEn="They trusted me ↓" target="#partnerships" light />

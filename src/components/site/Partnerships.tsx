@@ -211,9 +211,6 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
           </div>
         )}
 
-        {/* Gradient transition → Testimonials */}
-        <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-b from-transparent to-[#F8F0EB] pointer-events-none" />
-
         {/* Teaser */}
         <div className="relative z-10 flex justify-center pt-10 pb-6">
           <ScrollTeaser textFr="Ce qu'ils en disent ↓" textEn="What they say ↓" target="#testimonials" light={false} />
