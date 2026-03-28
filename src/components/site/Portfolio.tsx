@@ -8,7 +8,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t, filterLabels } from "@/lib/i18n";
-import { PortfolioItem, MediaCategory, MediaItem, SiteContent, CATEGORY_LABELS } from "@/types";
+import { PortfolioItem, Partnership, MediaCategory, MediaItem, SiteContent, CATEGORY_LABELS } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
 import {
   detectVideoSource,
@@ -19,7 +19,23 @@ import ItemModal from "./ItemModal";
 
 interface PortfolioProps {
   items: PortfolioItem[];
+  partnerships?: Partnership[];
   content: SiteContent;
+}
+
+/** Convert a Partnership to a PortfolioItem for unified display in "My Work" */
+function partnershipToItem(p: Partnership): PortfolioItem {
+  return {
+    id: `partnership-${p.id}`,
+    title: { fr: p.name, en: p.name },
+    location: "",
+    category: "hotel",
+    description: p.description,
+    type: p.gallery?.[0]?.type === "video" ? "video" : "image",
+    gallery: p.gallery || [],
+    order: p.order,
+    visible: p.visible !== false,
+  };
 }
 
 const categories: (MediaCategory | "all")[] = ["all", "hotel", "paysage", "lifestyle", "drone", "activity"];
@@ -211,7 +227,7 @@ function MediaCard({
 }
 
 // ─── Main component ───
-export default function Portfolio({ items, content }: PortfolioProps) {
+export default function Portfolio({ items, partnerships = [], content }: PortfolioProps) {
   const { lang } = useLanguage();
   const isDesktop = useBreakpoint();
   const [activeCategory, setActiveCategory] = useState<MediaCategory | "all">("all");
@@ -232,7 +248,11 @@ export default function Portfolio({ items, content }: PortfolioProps) {
     [autoScrollPlugin]
   );
 
-  const visibleItems = items.filter((item) => item.visible);
+  // Merge portfolio items + partnerships (partnerships always appear last, category "hotel")
+  const visibleItems = [
+    ...items.filter((item) => item.visible),
+    ...partnerships.filter((p) => p.visible !== false).map(partnershipToItem),
+  ];
   const filtered = activeCategory === "all"
     ? visibleItems
     : visibleItems.filter((item) => item.category === activeCategory);
@@ -264,14 +284,18 @@ export default function Portfolio({ items, content }: PortfolioProps) {
 
       {filtered.length > 0 ? (
         isDesktop ? (
-          /* ─── Desktop: masonry grid ─── */
+          /* ─── Desktop: CSS Grid masonry ─── */
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="columns-2 lg:columns-3 gap-5">
-              {filtered.map((item) => (
-                <div key={item.id} className="break-inside-avoid mb-5">
-                  <MediaCard item={item} lang={lang} format={getCardFormat(item)} onClick={() => setSelectedItem(item)} />
-                </div>
-              ))}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 items-start">
+              {filtered.map((item) => {
+                const format = getCardFormat(item);
+                const isWide = (item.gallery?.length ?? 0) > 5;
+                return (
+                  <div key={item.id} className={isWide ? "col-span-2" : ""}>
+                    <MediaCard item={item} lang={lang} format={format} onClick={() => setSelectedItem(item)} />
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : (

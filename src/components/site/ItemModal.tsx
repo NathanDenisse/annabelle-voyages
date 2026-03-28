@@ -27,9 +27,16 @@ export default function ItemModal({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const dragY = useMotionValue(0);
   const closing = useRef(false);
-  const modalRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const lightboxRef = useRef<number | null>(null);
   lightboxRef.current = lightboxIndex;
+
+  // Lock body scroll
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
 
   // Escape key — only close modal if lightbox is not open
   useEffect(() => {
@@ -54,7 +61,7 @@ export default function ItemModal({
 
     const onMove = (e: TouchEvent) => {
       if (closing.current || lightboxRef.current !== null) return;
-      const scrollTop = modalRef.current?.scrollTop ?? 0;
+      const scrollTop = scrollRef.current?.scrollTop ?? 0;
       const dy = e.touches[0].clientY - startY;
       const dx = e.touches[0].clientX - startX;
       if (!determined && (Math.abs(dy) > 8 || Math.abs(dx) > 8)) {
@@ -92,82 +99,87 @@ export default function ItemModal({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Fullscreen backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-[5%]"
+        className="fixed inset-0 z-50 bg-black/95"
         onClick={onClose}
       >
-        {/* Modal card */}
+        {/* Modal panel — fullscreen */}
         <motion.div
           style={{ y: dragY }}
-          initial={{ scale: 0.96, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.96, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          ref={modalRef}
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
+          transition={{ type: "spring", stiffness: 340, damping: 40 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full h-full bg-[#1A1210] rounded-2xl overflow-y-auto flex flex-col"
+          className="absolute inset-0 bg-[#120E0C] flex flex-col"
         >
-          {/* Drag handle (mobile hint) */}
+          {/* Drag handle (mobile) */}
           <div className="flex justify-center pt-3 pb-0 md:hidden flex-shrink-0">
             <div className="w-10 h-1 rounded-full bg-white/20" />
           </div>
 
           {/* Sticky header */}
-          <div className="sticky top-0 z-10 bg-[#1A1210]/95 backdrop-blur-sm border-b border-white/10 px-5 py-4 flex items-center justify-between gap-4 flex-shrink-0">
-            <h2 className="font-serif italic text-2xl text-white leading-tight line-clamp-2">
-              {title}
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors flex-shrink-0"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          {/* Meta: description + location + category pills */}
-          {(description || location || categoryLabel) && (
-            <div className="px-5 pt-4 pb-2 space-y-3 flex-shrink-0">
+          <div className="sticky top-0 z-10 bg-[#120E0C]/95 backdrop-blur-sm border-b border-white/10 px-5 py-4 flex items-start justify-between gap-4 flex-shrink-0">
+            <div className="flex-1 min-w-0">
+              <h2 className="font-serif italic text-xl md:text-2xl text-white leading-tight">
+                {title}
+              </h2>
               {description && (
-                <p className="font-sans text-sm text-white/60 leading-relaxed">{description}</p>
+                <p className="font-sans text-xs text-white/50 mt-1 truncate">{description}</p>
               )}
               {(location || categoryLabel) && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 mt-2">
                   {location && (
-                    <span className="font-sans text-xs text-white/50 bg-white/10 px-3 py-1 rounded-full">
+                    <span className="font-sans text-[11px] text-white/40 bg-white/8 border border-white/10 px-2.5 py-0.5 rounded-full">
                       {location}
                     </span>
                   )}
                   {categoryLabel && (
-                    <span className="font-sans text-xs text-white/50 bg-white/10 px-3 py-1 rounded-full">
+                    <span className="font-sans text-[11px] text-white/40 bg-white/8 border border-white/10 px-2.5 py-0.5 rounded-full">
                       {categoryLabel}
                     </span>
                   )}
                 </div>
               )}
             </div>
-          )}
+            <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
+              {gallery.length > 0 && (
+                <span className="font-sans text-xs text-white/50 bg-white/10 px-2.5 py-1 rounded-full">
+                  {gallery.length} média{gallery.length > 1 ? "s" : ""}
+                </span>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
 
-          {/* Media grid */}
-          {gallery.length > 0 ? (
-            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {gallery.map((item, idx) => (
-                <MediaGridItem
-                  key={idx}
-                  item={item}
-                  onClick={item.type === "image" ? () => setLightboxIndex(idx) : undefined}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center p-12">
-              <p className="font-serif italic text-white/30 text-lg">Aucun média disponible</p>
-            </div>
-          )}
+          {/* Scrollable media grid */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain">
+            {gallery.length > 0 ? (
+              <div className="p-4 columns-1 md:columns-2 lg:columns-3 gap-4">
+                {gallery.map((item, idx) => (
+                  <div key={idx} className="break-inside-avoid mb-4">
+                    <MediaGridItem
+                      item={item}
+                      onClick={item.type === "image" ? () => setLightboxIndex(idx) : undefined}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center p-12">
+                <p className="font-serif italic text-white/30 text-lg">Aucun média disponible</p>
+              </div>
+            )}
+          </div>
         </motion.div>
       </motion.div>
 
@@ -201,7 +213,7 @@ function MediaGridItem({
         className={`rounded-xl overflow-hidden bg-black/20 ${onClick ? "cursor-zoom-in" : ""}`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={item.url} alt="" className="w-full h-auto block" />
+        <img src={item.url} alt="" className="w-full h-auto block" loading="lazy" />
       </div>
     );
   }

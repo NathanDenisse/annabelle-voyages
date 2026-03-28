@@ -37,7 +37,7 @@ export default function Home() {
         <Navbar />
         <Hero content={content} socials={socials} />
         <About content={content} aboutImageUrl={content.aboutImageUrl} socials={socials} />
-        <Portfolio items={portfolioItems} content={content} />
+        <Portfolio items={portfolioItems} partnerships={partnerships} content={content} />
         <Partnerships items={partnerships} content={content} />
         <Testimonials items={testimonials} />
         <NextTrip data={nextTrip} />

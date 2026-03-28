@@ -212,14 +212,17 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
         </div>
 
         {isDesktop ? (
-          /* ─── Desktop: masonry grid ─── */
+          /* ─── Desktop: CSS Grid masonry ─── */
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="columns-2 lg:columns-3 gap-5">
-              {visible.map((item) => (
-                <div key={item.id} className="break-inside-avoid mb-5">
-                  <PartnershipCard item={item} onClick={() => setSelectedPartnership(item)} />
-                </div>
-              ))}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 items-start">
+              {visible.map((item) => {
+                const isWide = (item.gallery?.length ?? 0) > 5;
+                return (
+                  <div key={item.id} className={isWide ? "col-span-2" : ""}>
+                    <PartnershipCard item={item} onClick={() => setSelectedPartnership(item)} />
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : (

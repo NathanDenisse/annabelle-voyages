@@ -30,7 +30,6 @@ import {
 import { Partnership, MediaItem } from "@/types";
 import { getYouTubeId, uploadSingleImage, deleteFileByUrl } from "@/lib/storage";
 import SmartBilingualField from "@/components/admin/SmartBilingualField";
-import CoverEditor from "@/components/admin/CoverEditor";
 import GalleryEditor from "@/components/admin/GalleryEditor";
 import SortableItem from "@/components/admin/SortableItem";
 import toast from "react-hot-toast";
@@ -39,7 +38,6 @@ const emptyForm = {
   name: "",
   description: { fr: "", en: "" },
   logoUrl: "",
-  cover: null as MediaItem | null,
   gallery: [] as MediaItem[],
   externalLink: "",
   visible: true,
@@ -76,13 +74,11 @@ export default function PartnershipsAdmin() {
   };
 
   const openEdit = (item: Partnership) => {
-    const fullGallery = item.gallery || [];
     setForm({
       name: item.name,
       description: item.description,
       logoUrl: item.logoUrl || "",
-      cover: fullGallery[0] || null,
-      gallery: fullGallery.slice(1),
+      gallery: item.gallery || [],
       externalLink: item.externalLink,
       visible: item.visible,
     });
@@ -111,12 +107,10 @@ export default function PartnershipsAdmin() {
     }
     setSaving(true);
     try {
-      const fullGallery: MediaItem[] = form.cover
-        ? [form.cover, ...form.gallery]
-        : form.gallery;
+      const fullGallery: MediaItem[] = form.gallery;
 
-      // Derive legacy fields from cover
-      const cover = form.cover;
+      // Derive legacy fields from gallery[0] (cover) for backward compat
+      const cover = fullGallery[0] ?? null;
       const mp4VideoUrl = cover?.platform === "mp4" ? cover.url : "";
       const videoUrl = cover?.platform === "youtube" ? cover.url : "";
 
@@ -315,21 +309,12 @@ export default function PartnershipsAdmin() {
 
             <div className="p-5 space-y-6">
 
-              {/* ── Section 1: Cover ── */}
-              <div className="bg-blush-50 rounded-2xl p-4">
-                <CoverEditor
-                  item={form.cover}
-                  onChange={(cover) => setForm({ ...form, cover })}
-                  storagePath={`partnerships/${Date.now()}`}
-                />
-              </div>
-
-              {/* ── Section 2: Gallery ── */}
+              {/* ── Section 1: Médias (cover = gallery[0]) ── */}
               <div className="bg-blush-50 rounded-2xl p-4">
                 <GalleryEditor
                   items={form.gallery}
                   onChange={(gallery) => setForm({ ...form, gallery })}
-                  storagePath={`partnerships/gallery/${Date.now()}`}
+                  storagePath={`partnerships/${Date.now()}`}
                 />
               </div>
 

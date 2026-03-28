@@ -45,7 +45,7 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 5 } })
   );
 
   const ids = items.map((_, i) => String(i));
@@ -125,9 +125,9 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
   return (
     <div>
       <div className="mb-2">
-        <label className="font-sans text-sm font-medium text-brown-700">Galerie complète</label>
+        <label className="font-sans text-sm font-medium text-brown-700">Médias</label>
         <p className="font-sans text-xs text-brown-400 mt-0.5">
-          Toutes les photos et vidéos de ce projet. Glissez pour réordonner.
+          Le premier média = couverture. Glissez pour réordonner.
         </p>
       </div>
 
@@ -141,6 +141,7 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
                   key={getKey(item, idx)}
                   id={String(idx)}
                   item={item}
+                  isCover={idx === 0}
                   onRemove={() => remove(idx)}
                 />
               ))}
@@ -250,10 +251,12 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
 function SortableGalleryItem({
   id,
   item,
+  isCover,
   onRemove,
 }: {
   id: string;
   item: MediaItem;
+  isCover?: boolean;
   onRemove: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -297,10 +300,16 @@ function SortableGalleryItem({
           </button>
         </div>
 
-        <div className="flex justify-start">
-          <span className="font-sans text-[9px] bg-black/60 text-white px-1.5 py-0.5 rounded font-medium">
-            {badge}
-          </span>
+        <div className="flex justify-between items-end">
+          {isCover ? (
+            <span className="font-sans text-[9px] bg-terracotta-500 text-white px-1.5 py-0.5 rounded font-medium">
+              Couverture
+            </span>
+          ) : (
+            <span className="font-sans text-[9px] bg-black/60 text-white px-1.5 py-0.5 rounded font-medium">
+              {badge}
+            </span>
+          )}
         </div>
       </div>
     </div>
