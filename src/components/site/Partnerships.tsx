@@ -9,7 +9,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
 import { Partnership, SiteContent, MediaItem } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
-import { getYouTubeId, detectVideoSource } from "@/lib/storage";
+import { getYouTubeId } from "@/lib/storage";
 import ItemModal from "./ItemModal";
 
 interface PartnershipsProps {
@@ -17,15 +17,6 @@ interface PartnershipsProps {
   content: SiteContent;
 }
 
-type VideoFormat = "landscape" | "short" | "none";
-
-function getVideoFormat(url?: string): VideoFormat {
-  if (!url) return "none";
-  const source = detectVideoSource(url);
-  if (source === "youtube-short") return "short";
-  if (source === "youtube") return "landscape";
-  return "none";
-}
 
 function useBreakpoint() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -51,8 +42,7 @@ function buildPartnershipGallery(item: Partnership): MediaItem[] {
 // ─── Card ───
 function PartnershipCard({ item, onClick, forcedAspect }: { item: Partnership; onClick: () => void; forcedAspect?: string }) {
   const { lang } = useLanguage();
-  const [videoLoaded, setVideoLoaded] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [mp4Ready, setMp4Ready] = useState(false);
 
   // Determine cover from gallery or legacy fields
   const hasGallery = item.gallery && item.gallery.length > 0;
@@ -60,21 +50,16 @@ function PartnershipCard({ item, onClick, forcedAspect }: { item: Partnership; o
   const isMp4Cover = firstMedia?.platform === "mp4" || (!hasGallery && !!item.mp4VideoUrl);
   const mp4Src = firstMedia?.platform === "mp4" ? firstMedia.url : (!hasGallery ? item.mp4VideoUrl : undefined);
 
+  // YouTube video ID — used only for thumbnail (no autoplay in card)
   const youtubeUrl = firstMedia?.type === "video" && firstMedia.platform === "youtube"
     ? firstMedia.url
     : (!hasGallery ? item.videoUrl : undefined);
   const videoId = youtubeUrl ? getYouTubeId(youtubeUrl) : null;
-  const format: VideoFormat = isMp4Cover ? "landscape" : (youtubeUrl ? getVideoFormat(youtubeUrl) : "none");
 
-  const embedUrl = videoId
-    ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`
-    : null;
-
-  // Cover image: gallery[0] if image, else first image found, else YT thumb, else logo
+  // Cover image: gallery[0] if image, else YT thumb, else logo
   const coverImage = (() => {
     if (hasGallery) {
       if (firstMedia!.type === "image") return firstMedia!.url;
-      // gallery[0] is video — use any image from gallery as poster
       const anyImg = item.gallery!.find((m) => m.type === "image");
       if (anyImg) return anyImg.url;
       if (videoId) return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
@@ -85,32 +70,7 @@ function PartnershipCard({ item, onClick, forcedAspect }: { item: Partnership; o
     return item.logoUrl || null;
   })();
 
-  // Force YouTube loop via postMessage (loop=1 param unreliable with controls=0)
-  useEffect(() => {
-    if (!embedUrl) return;
-    const handleMessage = (e: MessageEvent) => {
-      if (e.origin !== "https://www.youtube.com") return;
-      if (e.source !== iframeRef.current?.contentWindow) return;
-      try {
-        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
-        if (data.event === "onStateChange") {
-          if (data.info === 0) {
-            setVideoLoaded(false);
-            const win = iframeRef.current?.contentWindow;
-            win?.postMessage(JSON.stringify({ event: "command", func: "seekTo", args: [0, true] }), "*");
-            win?.postMessage(JSON.stringify({ event: "command", func: "playVideo", args: "" }), "*");
-          } else if (data.info === 1) {
-            setVideoLoaded(true);
-          }
-        }
-      } catch {}
-    };
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [embedUrl]);
-
-  const aspectClass = forcedAspect ?? (format === "short" ? "aspect-[9/16]" : "aspect-[16/10]");
-  const isShortEmbed = youtubeUrl ? detectVideoSource(youtubeUrl) === "youtube-short" : false;
+  const aspectClass = forcedAspect ?? "aspect-[16/10]";
   const mediaCount = item.gallery?.length ?? ((item.images?.length ?? 0) + (item.videoUrl || item.mp4VideoUrl ? 1 : 0));
 
   return (
@@ -118,53 +78,25 @@ function PartnershipCard({ item, onClick, forcedAspect }: { item: Partnership; o
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden border border-white/10 hover:border-terracotta-500/40 cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
+      {/* Static cover — thumbnail or image; fades out only when MP4 is ready */}
       {coverImage ? (
         <Image src={coverImage} alt={item.name} fill
-          className={`object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-0" : "opacity-100"}`}
+          className={`object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
           loading="lazy"
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#4A3230] to-[#2A1815]" />
       )}
 
-      {/* MP4: autoPlay always — no IntersectionObserver */}
+      {/* MP4 autoplay — preload="none" avoids loading every video in the carousel */}
       {isMp4Cover && mp4Src && (
-        <video src={mp4Src} autoPlay muted loop playsInline preload="auto"
-          onCanPlay={() => setVideoLoaded(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
+        <video src={mp4Src} autoPlay muted loop playsInline preload="none"
+          onCanPlay={() => setMp4Ready(true)}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
         />
       )}
 
-      {/* YouTube: overflow-crop trick so vertical shorts fill the card (like object-cover) */}
-      {embedUrl && !isMp4Cover && (
-        <iframe
-          ref={iframeRef}
-          src={embedUrl}
-          title={`${item.name} video`}
-          allow="autoplay; encrypted-media"
-          onLoad={() => setVideoLoaded(true)}
-          aria-hidden="true"
-          style={{
-            pointerEvents: "none",
-            position: "absolute",
-            border: "none",
-            ...(isShortEmbed ? {
-              width: "100%",
-              height: "285%",
-              top: "50%",
-              left: "0",
-              transform: "translateY(-50%)",
-            } : {
-              width: "111.11%",
-              height: "100%",
-              top: "0",
-              left: "50%",
-              transform: "translateX(-50%)",
-            }),
-          }}
-          className={`transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
-        />
-      )}
+      {/* YouTube: static thumbnail only in card — iframe loads in popup on click */}
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
 
@@ -195,7 +127,7 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
   const [selectedPartnership, setSelectedPartnership] = useState<Partnership | null>(null);
 
   const autoScrollPlugin = useRef(AutoScroll({
-    speed: 0.6,
+    speed: 0.4,
     stopOnInteraction: false,
     stopOnMouseEnter: false,
     startDelay: 0,
@@ -251,18 +183,11 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
           /* ─── Mobile: Embla auto-scroll + drag ─── */
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
-              {visible.map((item) => {
-                // Use gallery[0] first for format detection (consistent with card internals)
-                const first = item.gallery?.[0];
-                const format: VideoFormat = first?.type === "video"
-                  ? (first.platform === "mp4" ? "landscape" : getVideoFormat(first.url))
-                  : (item.mp4VideoUrl ? "landscape" : getVideoFormat(item.videoUrl));
-                return (
-                  <div key={item.id} className={`flex-none px-1.5 ${format === "short" ? "w-[55%]" : "w-[84%]"}`}>
-                    <PartnershipCard item={item} onClick={() => setSelectedPartnership(item)} />
-                  </div>
-                );
-              })}
+              {visible.map((item) => (
+                <div key={item.id} className="flex-none px-1.5 w-[84%]">
+                  <PartnershipCard item={item} onClick={() => setSelectedPartnership(item)} />
+                </div>
+              ))}
             </div>
           </div>
         )}

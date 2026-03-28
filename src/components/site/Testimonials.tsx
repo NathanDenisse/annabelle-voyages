@@ -91,7 +91,7 @@ function DesktopGrid({ items, lang }: { items: Testimonial[]; lang: "fr" | "en" 
 
 function MobileCarousel({ items, lang }: { items: Testimonial[]; lang: "fr" | "en" }) {
   const autoScrollPlugin = useRef(AutoScroll({
-    speed: 0.6,
+    speed: 0.4,
     stopOnInteraction: false,
     stopOnMouseEnter: false,
     startDelay: 0,

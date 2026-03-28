@@ -59,24 +59,18 @@ function partnershipToItem(p: Partnership): PortfolioItem {
 
 const categories: (MediaCategory | "all")[] = ["all", "hotel", "paysage", "lifestyle", "drone", "activity"];
 
-type CardFormat = "landscape" | "short" | "photo";
+type CardFormat = "landscape" | "short";
 
 function getCardFormat(item: PortfolioItem): CardFormat {
+  // "short" ONLY for YouTube Shorts (URL contains /shorts/) — everything else is landscape
   const first = item.gallery?.[0];
-  if (first) {
-    if (first.type === "video") {
-      if (first.platform === "mp4") return "landscape";
-      const source = detectVideoSource(first.url);
-      return source === "youtube-short" ? "short" : "landscape";
-    }
-    return "photo";
+  if (first?.type === "video" && first.platform === "youtube") {
+    return detectVideoSource(first.url) === "youtube-short" ? "short" : "landscape";
   }
-  if (item.mp4VideoUrl) return "landscape";
-  if (item.type === "video" && item.videoUrl) {
-    const source = detectVideoSource(item.videoUrl);
-    return source === "youtube-short" ? "short" : "landscape";
+  if (!item.gallery?.length && item.videoUrl) {
+    return detectVideoSource(item.videoUrl) === "youtube-short" ? "short" : "landscape";
   }
-  return "photo";
+  return "landscape";
 }
 
 /** Build the lightbox gallery from an item — gallery[] first, then legacy fallback */
@@ -125,67 +119,19 @@ function MediaCard({
   format: CardFormat;
   onClick: () => void;
 }) {
-  const [videoLoaded, setVideoLoaded] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [mp4Ready, setMp4Ready] = useState(false);
 
   const hasGallery = item.gallery && item.gallery.length > 0;
   const firstMedia = hasGallery ? item.gallery![0] : null;
-  // Priority: gallery[0] MP4 → legacy mp4VideoUrl (only when no gallery)
+  // MP4 cover: gallery[0] if MP4, else legacy mp4VideoUrl
   const mp4CoverSrc = firstMedia?.platform === "mp4"
     ? firstMedia.url
     : (!hasGallery ? (item.mp4VideoUrl || null) : null);
   const isMp4 = !!mp4CoverSrc;
+  // Static thumbnail (YouTube cards show thumbnail only — iframe loads in popup)
   const thumbnail = getCardThumbnail(item);
-  const coverIsVideo = firstMedia?.type === "video";
-  const coverVideoId = coverIsVideo && firstMedia?.platform === "youtube"
-    ? getYouTubeId(firstMedia.url)
-    : null;
-  const embedUrl = coverVideoId
-    ? `https://www.youtube.com/embed/${coverVideoId}?autoplay=1&mute=1&loop=1&playlist=${coverVideoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`
-    : (!hasGallery && item.videoUrl && item.type === "video")
-      ? (() => { const id = getYouTubeId(item.videoUrl!); return id ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1` : null; })()
-      : null;
 
-  // Force YouTube loop via postMessage (loop=1 param unreliable with controls=0)
-  useEffect(() => {
-    if (!embedUrl) return;
-    const handleMessage = (e: MessageEvent) => {
-      if (e.origin !== "https://www.youtube.com") return;
-      if (e.source !== iframeRef.current?.contentWindow) return;
-      try {
-        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
-        if (data.event === "onStateChange") {
-          if (data.info === 0) {
-            setVideoLoaded(false);
-            const win = iframeRef.current?.contentWindow;
-            win?.postMessage(JSON.stringify({ event: "command", func: "seekTo", args: [0, true] }), "*");
-            win?.postMessage(JSON.stringify({ event: "command", func: "playVideo", args: "" }), "*");
-          } else if (data.info === 1) {
-            setVideoLoaded(true);
-          }
-        }
-      } catch {}
-    };
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [embedUrl]);
-
-  const aspectClass =
-    format === "short" ? "aspect-[9/16]"
-    : format === "landscape" ? "aspect-[16/10]"
-    : "aspect-[4/5]";
-
-  // Detect if the YouTube embed is a vertical short (9:16) — needed for iframe crop trick
-  const isShortVideo = (() => {
-    if (firstMedia?.type === "video" && firstMedia.platform === "youtube") {
-      return detectVideoSource(firstMedia.url) === "youtube-short";
-    }
-    if (!hasGallery && item.videoUrl) {
-      return detectVideoSource(item.videoUrl) === "youtube-short";
-    }
-    return false;
-  })();
-
+  const aspectClass = format === "short" ? "aspect-[9/16]" : "aspect-[16/10]";
   const mediaCount = item.gallery?.length ?? 0;
 
   return (
@@ -193,58 +139,28 @@ function MediaCard({
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
+      {/* Static thumbnail — always visible; fades out only when MP4 is ready */}
       {thumbnail && (
         <Image
           src={thumbnail}
           alt={t(item.title, lang)}
           fill
-          className={`object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-0" : "opacity-100"}`}
+          className={`object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
           loading="lazy"
         />
       )}
 
-      {/* MP4: gallery[0] or legacy mp4VideoUrl — autoPlay always */}
+      {/* MP4 autoplay — preload="none" avoids loading every video in the carousel */}
       {isMp4 && mp4CoverSrc && (
         <video
           src={mp4CoverSrc}
-          autoPlay muted loop playsInline preload="auto"
-          onCanPlay={() => setVideoLoaded(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
+          autoPlay muted loop playsInline preload="none"
+          onCanPlay={() => setMp4Ready(true)}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
         />
       )}
 
-      {/* YouTube: overflow-crop trick so vertical shorts fill the card (like object-cover) */}
-      {embedUrl && (
-        <iframe
-          ref={iframeRef}
-          src={embedUrl}
-          title={t(item.title, lang)}
-          allow="autoplay; encrypted-media"
-          onLoad={() => setVideoLoaded(true)}
-          aria-hidden="true"
-          style={{
-            pointerEvents: "none",
-            position: "absolute",
-            border: "none",
-            // 9:16 short in 16:10 card: make iframe tall enough to fill width, then center
-            // 16:9 video in 16:10 card: make iframe wide enough to fill height, then center
-            ...(isShortVideo ? {
-              width: "100%",
-              height: "285%", // W × 16/9 ÷ (W × 10/16) = 256/90 ≈ 284%
-              top: "50%",
-              left: "0",
-              transform: "translateY(-50%)",
-            } : {
-              width: "111.11%", // W × 10/9 ÷ W = 10/9 ≈ 111%
-              height: "100%",
-              top: "0",
-              left: "50%",
-              transform: "translateX(-50%)",
-            }),
-          }}
-          className={`transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
-        />
-      )}
+      {/* YouTube: static thumbnail only in card — iframe loads in popup on click */}
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent pointer-events-none" />
 
@@ -286,7 +202,7 @@ export default function Portfolio({ items, partnerships = [], content }: Portfol
   const isInView = useInView(headerRef, { once: true, margin: "-80px" });
 
   const autoScrollPlugin = useRef(AutoScroll({
-    speed: 0.6,
+    speed: 0.4,
     stopOnInteraction: false,
     stopOnMouseEnter: false,
     startDelay: 0,
