@@ -32,25 +32,24 @@ function useBreakpoint() {
 type CardFormat = "vertical" | "horizontal";
 
 function getPartnershipFormat(item: Partnership): CardFormat {
-  const hasGallery = item.gallery && item.gallery.length > 0;
-  const first = hasGallery ? item.gallery![0] : null;
+  const first = item.gallery && item.gallery.length > 0 ? item.gallery[0] : null;
 
-  if (first?.type === "video") {
+  // Rule 1 — gallery[0] exists: its type/platform is authoritative
+  if (first) {
     if (first.platform === "mp4") return "vertical";
-    const src = detectVideoSource(first.url);
-    if (src === "youtube-short" || src === "tiktok" || src === "instagram") return "vertical";
-    return "horizontal";
-  }
-
-  if (!hasGallery) {
-    if (item.mp4VideoUrl) return "vertical";
-    if (item.videoUrl) {
-      const src = detectVideoSource(item.videoUrl);
-      return src === "youtube-short" ? "vertical" : "horizontal";
+    if (first.platform === "youtube") {
+      return detectVideoSource(first.url) === "youtube-short" ? "vertical" : "horizontal";
     }
+    return "horizontal"; // image or unrecognised platform
   }
 
-  return "horizontal"; // images, logo
+  // Rule 2 — no gallery: fall back to legacy fields
+  if (item.mp4VideoUrl) return "vertical";
+  if (item.videoUrl) {
+    return detectVideoSource(item.videoUrl) === "youtube-short" ? "vertical" : "horizontal";
+  }
+
+  return "horizontal"; // images/logo only or no media
 }
 
 /** Build lightbox gallery — gallery[] first, then legacy fallback */

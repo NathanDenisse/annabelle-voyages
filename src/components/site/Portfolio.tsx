@@ -64,24 +64,22 @@ type CardFormat = "vertical" | "horizontal";
 function getCardFormat(item: PortfolioItem): CardFormat {
   const first = item.gallery?.[0];
 
-  if (first?.type === "video") {
+  // Rule 1 — gallery[0] exists: its type/platform is authoritative
+  if (first) {
     if (first.platform === "mp4") return "vertical";
-    const src = detectVideoSource(first.url);
-    if (src === "youtube-short" || src === "tiktok" || src === "instagram") return "vertical";
-    return "horizontal";
-  }
-
-  if (!item.gallery?.length) {
-    if (item.mp4VideoUrl) return "vertical";
-    if (item.videoUrl) {
-      const src = detectVideoSource(item.videoUrl);
-      return src === "youtube-short" || src === "tiktok" || src === "instagram"
-        ? "vertical"
-        : "horizontal";
+    if (first.platform === "youtube") {
+      return detectVideoSource(first.url) === "youtube-short" ? "vertical" : "horizontal";
     }
+    return "horizontal"; // image or unrecognised platform
   }
 
-  return "horizontal"; // images, no media
+  // Rule 2 — no gallery: fall back to legacy fields
+  if (item.mp4VideoUrl) return "vertical";
+  if (item.videoUrl) {
+    return detectVideoSource(item.videoUrl) === "youtube-short" ? "vertical" : "horizontal";
+  }
+
+  return "horizontal"; // imageUrl only or no media
 }
 
 /** Build the lightbox gallery from an item — gallery[] first, then legacy fallback */
