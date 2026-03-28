@@ -50,39 +50,50 @@ function MediaSlide({ item }: { item: MediaItem }) {
 function LightboxCarousel({ items, initialIndex, title, description, onClose }: Required<MediaLightboxProps>) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, startIndex: initialIndex });
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Swipe-down-to-close
+  // Swipe-down-to-close — native capture listeners to fire before Embla
   const dragY = useMotionValue(0);
-  const touchStartY = useRef(0);
-  const touchStartX = useRef(0);
-  const isVerticalGesture = useRef(false);
-  const gestureStarted = useRef(false);
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-    touchStartX.current = e.touches[0].clientX;
-    gestureStarted.current = false;
-    isVerticalGesture.current = false;
-  }, []);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let startY = 0, startX = 0, isVertical = false, determined = false;
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    const dy = e.touches[0].clientY - touchStartY.current;
-    const dx = e.touches[0].clientX - touchStartX.current;
-    if (!gestureStarted.current && (Math.abs(dy) > 8 || Math.abs(dx) > 8)) {
-      gestureStarted.current = true;
-      isVerticalGesture.current = dy > 0 && Math.abs(dy) > Math.abs(dx);
-    }
-    if (isVerticalGesture.current) dragY.set(Math.max(0, dy));
-  }, [dragY]);
+    const onStart = (e: TouchEvent) => {
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+      isVertical = false;
+      determined = false;
+      dragY.set(0);
+    };
+    const onMove = (e: TouchEvent) => {
+      const dy = e.touches[0].clientY - startY;
+      const dx = e.touches[0].clientX - startX;
+      if (!determined && (Math.abs(dy) > 8 || Math.abs(dx) > 8)) {
+        determined = true;
+        isVertical = dy > 0 && Math.abs(dy) > Math.abs(dx);
+      }
+      if (isVertical) dragY.set(Math.max(0, dy));
+    };
+    const onEnd = () => {
+      if (isVertical && dragY.get() > 100) {
+        onClose();
+      } else {
+        animate(dragY, 0, { type: "spring", stiffness: 400, damping: 35 });
+      }
+      isVertical = false;
+      determined = false;
+    };
 
-  const handleTouchEnd = useCallback(() => {
-    if (isVerticalGesture.current && dragY.get() > 100) {
-      onClose();
-    } else {
-      animate(dragY, 0, { type: "spring", stiffness: 400, damping: 35 });
-    }
-    isVerticalGesture.current = false;
-    gestureStarted.current = false;
+    el.addEventListener("touchstart", onStart, { passive: true, capture: true });
+    el.addEventListener("touchmove", onMove, { passive: true, capture: true });
+    el.addEventListener("touchend", onEnd, { capture: true });
+    return () => {
+      el.removeEventListener("touchstart", onStart, { capture: true });
+      el.removeEventListener("touchmove", onMove, { capture: true });
+      el.removeEventListener("touchend", onEnd, { capture: true });
+    };
   }, [dragY, onClose]);
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
@@ -107,13 +118,11 @@ function LightboxCarousel({ items, initialIndex, title, description, onClose }: 
 
   return (
     <motion.div
+      ref={containerRef}
       style={{ y: dragY }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 bg-black/95 flex flex-col"
       onClick={onClose}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
