@@ -15,7 +15,7 @@ import {
   getVideoThumbnail,
   getYouTubeId,
 } from "@/lib/storage";
-import MediaLightbox from "./MediaLightbox";
+import ItemModal from "./ItemModal";
 
 interface PortfolioProps {
   items: PortfolioItem[];
@@ -27,6 +27,15 @@ const categories: (MediaCategory | "all")[] = ["all", "hotel", "paysage", "lifes
 type CardFormat = "landscape" | "short" | "photo";
 
 function getCardFormat(item: PortfolioItem): CardFormat {
+  const first = item.gallery?.[0];
+  if (first) {
+    if (first.type === "video") {
+      if (first.platform === "mp4") return "landscape";
+      const source = detectVideoSource(first.url);
+      return source === "youtube-short" ? "short" : "landscape";
+    }
+    return "photo";
+  }
   if (item.mp4VideoUrl) return "landscape";
   if (item.type === "video" && item.videoUrl) {
     const source = detectVideoSource(item.videoUrl);
@@ -44,10 +53,15 @@ function buildGallery(item: PortfolioItem): MediaItem[] {
   return [];
 }
 
-/** Card cover thumbnail */
+/** Card cover thumbnail — follows priority: gallery[0] → mp4VideoUrl → videoUrl → imageUrl */
 function getCardThumbnail(item: PortfolioItem): string {
-  const firstImage = item.gallery?.find((m) => m.type === "image");
-  if (firstImage) return firstImage.url;
+  const first = item.gallery?.[0];
+  if (first) {
+    if (first.type === "image") return first.url;
+    if (first.platform === "mp4") return item.thumbnailUrl || ""; // video tag will play
+    const id = getYouTubeId(first.url);
+    return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : "";
+  }
   if (item.mp4VideoUrl) return item.thumbnailUrl || "";
   if (item.videoUrl) return getVideoThumbnail(item.videoUrl);
   return item.thumbnailUrl || item.imageUrl || "/images/placeholders/portfolio.svg";
@@ -79,11 +93,14 @@ function MediaCard({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const isMp4 = !!item.mp4VideoUrl && !item.gallery?.length;
   const hasGallery = item.gallery && item.gallery.length > 0;
-  const thumbnail = getCardThumbnail(item);
-
   const firstMedia = hasGallery ? item.gallery![0] : null;
+  // Priority: gallery[0] MP4 → legacy mp4VideoUrl (only when no gallery)
+  const mp4CoverSrc = firstMedia?.platform === "mp4"
+    ? firstMedia.url
+    : (!hasGallery ? (item.mp4VideoUrl || null) : null);
+  const isMp4 = !!mp4CoverSrc;
+  const thumbnail = getCardThumbnail(item);
   const coverIsVideo = firstMedia?.type === "video";
   const coverVideoId = coverIsVideo && firstMedia?.platform === "youtube"
     ? getYouTubeId(firstMedia.url)
@@ -140,10 +157,10 @@ function MediaCard({
         />
       )}
 
-      {/* MP4: autoPlay always — no IntersectionObserver */}
-      {isMp4 && (
+      {/* MP4: gallery[0] or legacy mp4VideoUrl — autoPlay always */}
+      {isMp4 && mp4CoverSrc && (
         <video
-          src={item.mp4VideoUrl}
+          src={mp4CoverSrc}
           autoPlay muted loop playsInline preload="auto"
           onCanPlay={() => setVideoLoaded(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
@@ -284,11 +301,13 @@ export default function Portfolio({ items, content }: PortfolioProps) {
       </div>
 
       <AnimatePresence>
-        {selectedItem && selectedGallery.length > 0 && (
-          <MediaLightbox
-            items={selectedGallery}
+        {selectedItem && (
+          <ItemModal
+            gallery={selectedGallery}
             title={t(selectedItem.title, lang)}
             description={selectedItem.description ? t(selectedItem.description, lang) : undefined}
+            location={selectedItem.location}
+            categoryLabel={t(CATEGORY_LABELS[selectedItem.category], lang)}
             onClose={() => setSelectedItem(null)}
           />
         )}

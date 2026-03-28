@@ -10,7 +10,7 @@ import { t } from "@/lib/i18n";
 import { Partnership, SiteContent, MediaItem } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
 import { getYouTubeId, detectVideoSource } from "@/lib/storage";
-import MediaLightbox from "./MediaLightbox";
+import ItemModal from "./ItemModal";
 
 interface PartnershipsProps {
   items: Partnership[];
@@ -70,11 +70,13 @@ function PartnershipCard({ item, onClick }: { item: Partnership; onClick: () => 
     ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`
     : null;
 
-  // Cover image: first image from gallery, or yt thumbnail, or legacy images
+  // Cover image: gallery[0] if image, else first image found, else YT thumb, else logo
   const coverImage = (() => {
     if (hasGallery) {
-      const firstImg = item.gallery!.find((m) => m.type === "image");
-      if (firstImg) return firstImg.url;
+      if (firstMedia!.type === "image") return firstMedia!.url;
+      // gallery[0] is video — use any image from gallery as poster
+      const anyImg = item.gallery!.find((m) => m.type === "image");
+      if (anyImg) return anyImg.url;
       if (videoId) return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
       return item.logoUrl || null;
     }
@@ -243,18 +245,9 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
       </section>
 
       <AnimatePresence>
-        {selectedPartnership && selectedGallery.length > 0 && (
-          <MediaLightbox
-            items={selectedGallery}
-            title={selectedPartnership.name}
-            description={t(selectedPartnership.description, lang)}
-            onClose={() => setSelectedPartnership(null)}
-          />
-        )}
-        {selectedPartnership && selectedGallery.length === 0 && (
-          // No content yet — show name only (reuse lightbox shell via empty state)
-          <MediaLightbox
-            items={[]}
+        {selectedPartnership && (
+          <ItemModal
+            gallery={selectedGallery}
             title={selectedPartnership.name}
             description={t(selectedPartnership.description, lang)}
             onClose={() => setSelectedPartnership(null)}
