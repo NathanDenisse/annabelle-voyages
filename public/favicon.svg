@@ -1,7 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <rect width="32" height="32" rx="6" fill="#FEFCF9"/>
-  <circle cx="16" cy="16" r="12.5" fill="none" stroke="#C4836A" stroke-width="1.2"/>
-  <circle cx="16" cy="16" r="9" fill="none" stroke="#C4836A" stroke-width="1.2"/>
-  <circle cx="16" cy="16" r="5.5" fill="none" stroke="#C4836A" stroke-width="1.2"/>
-  <circle cx="16" cy="16" r="1.5" fill="#C4836A"/>
+  <!-- Viewfinder bump -->
+  <rect x="6" y="7" width="6" height="3" rx="1" fill="#C4836A"/>
+  <!-- Camera body -->
+  <rect x="3" y="9" width="26" height="16" rx="3" fill="#C4836A"/>
+  <!-- Lens ring (cream) -->
+  <circle cx="16" cy="17" r="5.5" fill="#FEFCF9"/>
+  <!-- Lens inner -->
+  <circle cx="16" cy="17" r="3.2" fill="#C4836A"/>
 </svg>
