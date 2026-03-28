@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useInView } from "framer-motion";
+import { MapPin } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
 import { NextTrip as NextTripType } from "@/types";
@@ -44,16 +45,14 @@ export default function NextTrip({ data }: NextTripProps) {
     document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const bgColor = "#0E7C7B";
-
   return (
     <section
       ref={sectionRef}
       id="next-trip"
-      className="relative w-full py-20 md:py-28 flex items-center justify-center overflow-hidden"
-      style={{ backgroundColor: bgColor }}
+      className="relative w-full min-h-[70vh] md:min-h-[80vh] flex items-center justify-center overflow-hidden"
+      style={{ backgroundColor: "#0E7C7B" }}
     >
-      {/* Background video — always in DOM so the ref is available on mount */}
+      {/* Background video */}
       <video
         ref={videoRef}
         src={data.backgroundVideoUrl || undefined}
@@ -70,14 +69,16 @@ export default function NextTrip({ data }: NextTripProps) {
         }`}
       />
 
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/55 pointer-events-none" />
+      {/* Overlay flat */}
+      <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+      {/* Overlay gradient — profondeur */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40 pointer-events-none" />
 
       {/* Content */}
       <div
         ref={contentRef}
-        className={`relative z-10 text-center px-6 max-w-3xl mx-auto transition-all duration-700 ease-out ${
-          isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+        className={`relative z-10 text-center px-6 max-w-3xl mx-auto py-16 transition-all duration-700 ease-out ${
+          isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
         }`}
       >
         {/* Label */}
@@ -86,24 +87,27 @@ export default function NextTrip({ data }: NextTripProps) {
         </p>
 
         {/* Destination */}
-        <h2 className="font-serif italic font-normal text-5xl md:text-7xl text-white leading-none mb-3"
-          style={{ textShadow: "0 2px 24px rgba(0,0,0,0.4)" }}>
+        <h2
+          className="font-serif italic font-semibold text-6xl md:text-8xl lg:text-9xl text-white leading-none mb-2"
+          style={{ textShadow: "0 4px 30px rgba(0,0,0,0.5)" }}
+        >
           {t(data.destination, lang)}
         </h2>
 
         {/* Period */}
-        <p className="font-sans font-light text-base text-white/70 tracking-widest uppercase mb-8">
+        <p className="font-sans font-light text-xl md:text-2xl text-white/90 tracking-widest uppercase mb-8">
           {t(data.period, lang)}
         </p>
 
         {/* Places pills */}
         {data.places.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
+          <div className="flex flex-wrap justify-center gap-3 mb-8">
             {data.places.map((place) => (
               <span
                 key={place}
-                className="font-sans text-xs text-white/80 border border-white/30 backdrop-blur-sm px-3 py-1.5 rounded-full"
+                className="flex items-center gap-1.5 font-sans text-sm text-white/90 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/25 px-5 py-2 rounded-full transition-colors duration-200"
               >
+                <MapPin size={11} className="flex-shrink-0 opacity-70" />
                 {place}
               </span>
             ))}
@@ -111,14 +115,14 @@ export default function NextTrip({ data }: NextTripProps) {
         )}
 
         {/* Pitch */}
-        <p className="font-sans text-sm sm:text-base text-white/70 leading-relaxed max-w-lg mx-auto mb-10">
+        <p className="font-sans text-lg font-light text-white/80 leading-relaxed max-w-lg mx-auto mt-8 mb-10">
           {t(data.pitch, lang)}
         </p>
 
         {/* CTA */}
         <button
           onClick={scrollToContact}
-          className="inline-block bg-terracotta-500 hover:bg-terracotta-600 active:bg-terracotta-700 text-white font-sans font-medium px-8 py-3.5 rounded-full transition-colors duration-300 text-sm tracking-wide"
+          className="inline-block bg-terracotta-500 hover:bg-terracotta-400 active:bg-terracotta-600 text-white font-sans font-medium px-10 py-4 rounded-full text-base tracking-wide transition-all duration-300 hover:scale-105 active:scale-95"
         >
           {lang === "fr" ? "Me contacter" : "Get in touch"}
         </button>
