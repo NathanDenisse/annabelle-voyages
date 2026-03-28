@@ -25,11 +25,13 @@ export interface DiagnosticItem {
   id: string;
   name: string;
   galleryLength: number;
+  hasLegacyFields: boolean;
   cover: {
     type: string;
     platform: string;
     format: string;
-    storedFormat: string;
+    storedFormat: string;     // what's in Firestore (or "MANQUANT")
+    formatMissing: boolean;   // true = needs migration
     urlTail: string;
     hasThumbnail: boolean;
   } | null;
@@ -162,30 +164,40 @@ async function diagnoseCollection(collectionName: string, nameField: string): Pr
     const raw = docSnap.data() as Record<string, unknown>;
     const gallery = (raw.gallery as Record<string, unknown>[]) ?? [];
     const first = gallery[0] ?? null;
-    const name = (raw[nameField] as string) || (typeof raw.name === "string" ? raw.name : docSnap.id);
+
+    // title can be a LocalizedText object {fr, en} — extract .fr in that case
+    const rawName = raw[nameField];
+    const name =
+      typeof rawName === "string"
+        ? rawName
+        : rawName && typeof (rawName as Record<string, unknown>).fr === "string"
+        ? (rawName as Record<string, unknown>).fr as string
+        : docSnap.id;
+
+    const hasLegacyFields = !!(raw.mp4VideoUrl || raw.videoUrl || raw.imageUrl || raw.images);
 
     let cover: DiagnosticItem["cover"] = null;
     if (first) {
       const url = (first.url as string) || "";
       const platform = (first.platform as string) || "—";
       const storedFormat = (first.format as string) || "MANQUANT";
+      const formatMissing = !first.format;
       const computed = inferFormat(first);
       const detectedSource = detectSource(url);
+      let displayPlatform = platform;
+      if (platform === "youtube") displayPlatform = `youtube (${detectedSource})`;
       cover = {
         type: (first.type as string) || "—",
-        platform,
+        platform: displayPlatform,
         format: computed,
         storedFormat,
+        formatMissing,
         urlTail: url.length > 50 ? "…" + url.slice(-50) : url,
         hasThumbnail: !!first.thumbnailUrl,
       };
-      // Include detected source for videos
-      if (platform === "youtube") {
-        cover.platform = `youtube (${detectedSource})`;
-      }
     }
 
-    return { collection: collectionName, id: docSnap.id, name: String(name), galleryLength: gallery.length, cover };
+    return { collection: collectionName, id: docSnap.id, name: String(name), galleryLength: gallery.length, hasLegacyFields, cover };
   });
 }
 

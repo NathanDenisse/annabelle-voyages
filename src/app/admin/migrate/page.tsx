@@ -147,9 +147,16 @@ export default function MigratePage() {
                     <span className="font-sans text-xs font-semibold text-brown-700 truncate flex-1">
                       {item.name}
                     </span>
-                    <span className="font-sans text-[10px] text-brown-400 flex-shrink-0">
-                      {item.collection} · {item.galleryLength} media{item.galleryLength !== 1 ? "s" : ""}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {item.hasLegacyFields && (
+                        <span className="font-sans text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">
+                          legacy
+                        </span>
+                      )}
+                      <span className="font-sans text-[10px] text-brown-400">
+                        {item.collection} · {item.galleryLength} media{item.galleryLength !== 1 ? "s" : ""}
+                      </span>
+                    </div>
                   </div>
                   {item.cover ? (
                     <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 pl-2">
@@ -161,7 +168,7 @@ export default function MigratePage() {
                       </p>
                       <p className="font-sans text-[11px]">
                         <span className="text-brown-500">format stocké:</span>{" "}
-                        <span className={item.cover.storedFormat === "MANQUANT" ? "text-red-500 font-semibold" : "text-green-600"}>
+                        <span className={item.cover.formatMissing ? "text-amber-600 font-semibold" : "text-green-600"}>
                           {item.cover.storedFormat}
                         </span>
                       </p>
