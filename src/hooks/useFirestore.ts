@@ -178,6 +178,11 @@ const seedTestimonials: Omit<Testimonial, "id">[] = [
   },
 ];
 
+const defaultTestimonials: Testimonial[] = seedTestimonials.map((t, i) => ({
+  ...t,
+  id: `default-${i}`,
+}));
+
 export function useTestimonials() {
   const [items, setItems] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,7 +201,7 @@ export function useTestimonials() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { items, loading };
+  return { items: items.length > 0 ? items : defaultTestimonials, loading };
 }
 
 export function useMessages() {
