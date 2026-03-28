@@ -77,6 +77,7 @@ function MediaCard({
   onClick: () => void;
 }) {
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const isMp4 = !!item.mp4VideoUrl && !item.gallery?.length;
   const hasGallery = item.gallery && item.gallery.length > 0;
@@ -92,6 +93,30 @@ function MediaCard({
     : (!hasGallery && item.videoUrl && item.type === "video")
       ? (() => { const id = getYouTubeId(item.videoUrl!); return id ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1` : null; })()
       : null;
+
+  // Force YouTube loop via postMessage (loop=1 param unreliable with controls=0)
+  useEffect(() => {
+    if (!embedUrl) return;
+    const handleMessage = (e: MessageEvent) => {
+      if (e.origin !== "https://www.youtube.com") return;
+      if (e.source !== iframeRef.current?.contentWindow) return;
+      try {
+        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+        if (data.event === "onStateChange") {
+          if (data.info === 0) {
+            setVideoLoaded(false);
+            const win = iframeRef.current?.contentWindow;
+            win?.postMessage(JSON.stringify({ event: "command", func: "seekTo", args: [0, true] }), "*");
+            win?.postMessage(JSON.stringify({ event: "command", func: "playVideo", args: "" }), "*");
+          } else if (data.info === 1) {
+            setVideoLoaded(true);
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [embedUrl]);
 
   const aspectClass =
     format === "short" ? "aspect-[9/16]"
@@ -128,6 +153,7 @@ function MediaCard({
       {/* YouTube: always rendered — no inViewport gate */}
       {embedUrl && (
         <iframe
+          ref={iframeRef}
           src={embedUrl}
           title={t(item.title, lang)}
           allow="autoplay; encrypted-media"

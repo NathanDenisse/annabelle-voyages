@@ -52,6 +52,7 @@ function buildPartnershipGallery(item: Partnership): MediaItem[] {
 function PartnershipCard({ item, onClick }: { item: Partnership; onClick: () => void }) {
   const { lang } = useLanguage();
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Determine cover from gallery or legacy fields
   const hasGallery = item.gallery && item.gallery.length > 0;
@@ -82,6 +83,30 @@ function PartnershipCard({ item, onClick }: { item: Partnership; onClick: () => 
     return item.logoUrl || null;
   })();
 
+  // Force YouTube loop via postMessage (loop=1 param unreliable with controls=0)
+  useEffect(() => {
+    if (!embedUrl) return;
+    const handleMessage = (e: MessageEvent) => {
+      if (e.origin !== "https://www.youtube.com") return;
+      if (e.source !== iframeRef.current?.contentWindow) return;
+      try {
+        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+        if (data.event === "onStateChange") {
+          if (data.info === 0) {
+            setVideoLoaded(false);
+            const win = iframeRef.current?.contentWindow;
+            win?.postMessage(JSON.stringify({ event: "command", func: "seekTo", args: [0, true] }), "*");
+            win?.postMessage(JSON.stringify({ event: "command", func: "playVideo", args: "" }), "*");
+          } else if (data.info === 1) {
+            setVideoLoaded(true);
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [embedUrl]);
+
   const aspectClass = format === "short" ? "aspect-[9/16]" : "aspect-[16/9]";
   const mediaCount = item.gallery?.length ?? ((item.images?.length ?? 0) + (item.videoUrl || item.mp4VideoUrl ? 1 : 0));
 
@@ -109,7 +134,7 @@ function PartnershipCard({ item, onClick }: { item: Partnership; onClick: () => 
 
       {/* YouTube: always rendered — no inViewport gate */}
       {embedUrl && !isMp4Cover && (
-        <iframe src={embedUrl} title={`${item.name} video`} allow="autoplay; encrypted-media"
+        <iframe ref={iframeRef} src={embedUrl} title={`${item.name} video`} allow="autoplay; encrypted-media"
           onLoad={() => setVideoLoaded(true)}
           style={{ pointerEvents: "none" }}
           className={`absolute inset-0 w-full h-full border-none transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
