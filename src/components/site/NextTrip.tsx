@@ -49,7 +49,7 @@ export default function NextTrip({ data }: NextTripProps) {
     <section
       ref={sectionRef}
       id="next-trip"
-      className="relative w-full min-h-[50vh] flex items-center justify-center overflow-hidden"
+      className="relative w-full min-h-[60vh] md:min-h-[70vh] flex items-center justify-center overflow-hidden"
       style={{ backgroundColor: "#0E7C7B" }}
     >
       {/* Background video */}
