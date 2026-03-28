@@ -53,23 +53,22 @@ export default function NextTrip({ data }: NextTripProps) {
       className="relative w-full py-20 md:py-28 flex items-center justify-center overflow-hidden"
       style={{ backgroundColor: bgColor }}
     >
-      {/* Background video */}
-      {data.backgroundVideoUrl && (
-        <video
-          ref={videoRef}
-          src={data.backgroundVideoUrl}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          onCanPlay={() => setVideoReady(true)}
-          onPlaying={() => setVideoReady(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
-            videoReady ? "opacity-100" : "opacity-0"
-          }`}
-        />
-      )}
+      {/* Background video — always in DOM so the ref is available on mount */}
+      <video
+        ref={videoRef}
+        src={data.backgroundVideoUrl || undefined}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        {...{ "webkit-playsinline": "true" }}
+        onCanPlay={() => setVideoReady(true)}
+        onPlaying={() => setVideoReady(true)}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
+          videoReady && data.backgroundVideoUrl ? "opacity-100" : "opacity-0"
+        }`}
+      />
 
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/55 pointer-events-none" />
