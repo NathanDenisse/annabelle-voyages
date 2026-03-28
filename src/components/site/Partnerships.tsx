@@ -109,7 +109,8 @@ function PartnershipCard({ item, onClick, forcedAspect }: { item: Partnership; o
     return () => window.removeEventListener("message", handleMessage);
   }, [embedUrl]);
 
-  const aspectClass = forcedAspect ?? (format === "short" ? "aspect-[9/16]" : "aspect-[16/9]");
+  const aspectClass = forcedAspect ?? (format === "short" ? "aspect-[9/16]" : "aspect-[16/10]");
+  const isShortEmbed = youtubeUrl ? detectVideoSource(youtubeUrl) === "youtube-short" : false;
   const mediaCount = item.gallery?.length ?? ((item.images?.length ?? 0) + (item.videoUrl || item.mp4VideoUrl ? 1 : 0));
 
   return (
@@ -134,13 +135,34 @@ function PartnershipCard({ item, onClick, forcedAspect }: { item: Partnership; o
         />
       )}
 
-      {/* YouTube: always rendered — no inViewport gate */}
+      {/* YouTube: overflow-crop trick so vertical shorts fill the card (like object-cover) */}
       {embedUrl && !isMp4Cover && (
-        <iframe ref={iframeRef} src={embedUrl} title={`${item.name} video`} allow="autoplay; encrypted-media"
+        <iframe
+          ref={iframeRef}
+          src={embedUrl}
+          title={`${item.name} video`}
+          allow="autoplay; encrypted-media"
           onLoad={() => setVideoLoaded(true)}
-          style={{ pointerEvents: "none" }}
-          className={`absolute inset-0 w-full h-full border-none transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
           aria-hidden="true"
+          style={{
+            pointerEvents: "none",
+            position: "absolute",
+            border: "none",
+            ...(isShortEmbed ? {
+              width: "100%",
+              height: "285%",
+              top: "50%",
+              left: "0",
+              transform: "translateY(-50%)",
+            } : {
+              width: "111.11%",
+              height: "100%",
+              top: "0",
+              left: "50%",
+              transform: "translateX(-50%)",
+            }),
+          }}
+          className={`transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
         />
       )}
 
@@ -219,7 +241,7 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
                 <PartnershipCard
                   key={item.id}
                   item={item}
-                  forcedAspect="aspect-video"
+                  forcedAspect="aspect-[16/10]"
                   onClick={() => setSelectedPartnership(item)}
                 />
               ))}

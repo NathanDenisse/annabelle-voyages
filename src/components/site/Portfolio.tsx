@@ -172,8 +172,19 @@ function MediaCard({
 
   const aspectClass =
     format === "short" ? "aspect-[9/16]"
-    : format === "landscape" ? "aspect-[16/9]"
+    : format === "landscape" ? "aspect-[16/10]"
     : "aspect-[4/5]";
+
+  // Detect if the YouTube embed is a vertical short (9:16) — needed for iframe crop trick
+  const isShortVideo = (() => {
+    if (firstMedia?.type === "video" && firstMedia.platform === "youtube") {
+      return detectVideoSource(firstMedia.url) === "youtube-short";
+    }
+    if (!hasGallery && item.videoUrl) {
+      return detectVideoSource(item.videoUrl) === "youtube-short";
+    }
+    return false;
+  })();
 
   const mediaCount = item.gallery?.length ?? 0;
 
@@ -202,7 +213,7 @@ function MediaCard({
         />
       )}
 
-      {/* YouTube: always rendered — no inViewport gate */}
+      {/* YouTube: overflow-crop trick so vertical shorts fill the card (like object-cover) */}
       {embedUrl && (
         <iframe
           ref={iframeRef}
@@ -210,9 +221,28 @@ function MediaCard({
           title={t(item.title, lang)}
           allow="autoplay; encrypted-media"
           onLoad={() => setVideoLoaded(true)}
-          style={{ pointerEvents: "none" }}
-          className={`absolute inset-0 w-full h-full border-none transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
           aria-hidden="true"
+          style={{
+            pointerEvents: "none",
+            position: "absolute",
+            border: "none",
+            // 9:16 short in 16:10 card: make iframe tall enough to fill width, then center
+            // 16:9 video in 16:10 card: make iframe wide enough to fill height, then center
+            ...(isShortVideo ? {
+              width: "100%",
+              height: "285%", // W × 16/9 ÷ (W × 10/16) = 256/90 ≈ 284%
+              top: "50%",
+              left: "0",
+              transform: "translateY(-50%)",
+            } : {
+              width: "111.11%", // W × 10/9 ÷ W = 10/9 ≈ 111%
+              height: "100%",
+              top: "0",
+              left: "50%",
+              transform: "translateX(-50%)",
+            }),
+          }}
+          className={`transition-opacity duration-700 ${videoLoaded ? "opacity-100" : "opacity-0"}`}
         />
       )}
 
