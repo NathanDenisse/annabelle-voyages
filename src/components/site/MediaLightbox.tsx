@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, animate, useMotionValue } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
 import { MediaItem } from "@/types";
 import { getYouTubeId, detectVideoSource } from "@/lib/storage";
@@ -51,6 +51,40 @@ function LightboxCarousel({ items, initialIndex, title, description, onClose }: 
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, startIndex: initialIndex });
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
+  // Swipe-down-to-close
+  const dragY = useMotionValue(0);
+  const touchStartY = useRef(0);
+  const touchStartX = useRef(0);
+  const isVerticalGesture = useRef(false);
+  const gestureStarted = useRef(false);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchStartX.current = e.touches[0].clientX;
+    gestureStarted.current = false;
+    isVerticalGesture.current = false;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const dy = e.touches[0].clientY - touchStartY.current;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    if (!gestureStarted.current && (Math.abs(dy) > 8 || Math.abs(dx) > 8)) {
+      gestureStarted.current = true;
+      isVerticalGesture.current = dy > 0 && Math.abs(dy) > Math.abs(dx);
+    }
+    if (isVerticalGesture.current) dragY.set(Math.max(0, dy));
+  }, [dragY]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (isVerticalGesture.current && dragY.get() > 100) {
+      onClose();
+    } else {
+      animate(dragY, 0, { type: "spring", stiffness: 400, damping: 35 });
+    }
+    isVerticalGesture.current = false;
+    gestureStarted.current = false;
+  }, [dragY, onClose]);
+
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
@@ -73,9 +107,13 @@ function LightboxCarousel({ items, initialIndex, title, description, onClose }: 
 
   return (
     <motion.div
+      style={{ y: dragY }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 bg-black/95 flex flex-col"
       onClick={onClose}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
