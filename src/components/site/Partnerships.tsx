@@ -9,7 +9,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
 import { Partnership, SiteContent, MediaItem } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
-import { getYouTubeId } from "@/lib/storage";
+import { detectVideoSource, getYouTubeId } from "@/lib/storage";
 import ItemModal from "./ItemModal";
 
 interface PartnershipsProps {
@@ -29,6 +29,30 @@ function useBreakpoint() {
   return isDesktop;
 }
 
+type CardFormat = "vertical" | "horizontal";
+
+function getPartnershipFormat(item: Partnership): CardFormat {
+  const hasGallery = item.gallery && item.gallery.length > 0;
+  const first = hasGallery ? item.gallery![0] : null;
+
+  if (first?.type === "video") {
+    if (first.platform === "mp4") return "vertical";
+    const src = detectVideoSource(first.url);
+    if (src === "youtube-short" || src === "tiktok" || src === "instagram") return "vertical";
+    return "horizontal";
+  }
+
+  if (!hasGallery) {
+    if (item.mp4VideoUrl) return "vertical";
+    if (item.videoUrl) {
+      const src = detectVideoSource(item.videoUrl);
+      return src === "youtube-short" ? "vertical" : "horizontal";
+    }
+  }
+
+  return "horizontal"; // images, logo
+}
+
 /** Build lightbox gallery — gallery[] first, then legacy fallback */
 function buildPartnershipGallery(item: Partnership): MediaItem[] {
   if (item.gallery && item.gallery.length > 0) return item.gallery;
@@ -40,7 +64,7 @@ function buildPartnershipGallery(item: Partnership): MediaItem[] {
 }
 
 // ─── Card ───
-function PartnershipCard({ item, onClick, forcedAspect }: { item: Partnership; onClick: () => void; forcedAspect?: string }) {
+function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partnership; onClick: () => void; format?: CardFormat }) {
   const { lang } = useLanguage();
   const [mp4Ready, setMp4Ready] = useState(false);
 
@@ -71,7 +95,7 @@ function PartnershipCard({ item, onClick, forcedAspect }: { item: Partnership; o
     return item.logoUrl || null;
   })();
 
-  const aspectClass = forcedAspect ?? "aspect-[16/10]";
+  const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
   const mediaCount = item.gallery?.length ?? ((item.images?.length ?? 0) + (item.videoUrl || item.mp4VideoUrl ? 1 : 0));
 
   return (
@@ -174,7 +198,7 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
                 <PartnershipCard
                   key={item.id}
                   item={item}
-                  forcedAspect="aspect-[16/10]"
+                  format="horizontal"
                   onClick={() => setSelectedPartnership(item)}
                 />
               ))}
@@ -184,11 +208,14 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
           /* ─── Mobile: Embla auto-scroll + drag ─── */
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
-              {visible.map((item) => (
-                <div key={item.id} className="flex-none px-1.5 w-[84%]">
-                  <PartnershipCard item={item} onClick={() => setSelectedPartnership(item)} />
-                </div>
-              ))}
+              {visible.map((item) => {
+                const format = getPartnershipFormat(item);
+                return (
+                  <div key={item.id} className={`flex-none px-1.5 ${format === "vertical" ? "w-[55%]" : "w-[80%]"}`}>
+                    <PartnershipCard item={item} format={format} onClick={() => setSelectedPartnership(item)} />
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

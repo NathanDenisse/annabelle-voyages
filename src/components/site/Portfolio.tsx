@@ -59,18 +59,29 @@ function partnershipToItem(p: Partnership): PortfolioItem {
 
 const categories: (MediaCategory | "all")[] = ["all", "hotel", "paysage", "lifestyle", "drone", "activity"];
 
-type CardFormat = "landscape" | "short";
+type CardFormat = "vertical" | "horizontal";
 
 function getCardFormat(item: PortfolioItem): CardFormat {
-  // "short" ONLY for YouTube Shorts (URL contains /shorts/) — everything else is landscape
   const first = item.gallery?.[0];
-  if (first?.type === "video" && first.platform === "youtube") {
-    return detectVideoSource(first.url) === "youtube-short" ? "short" : "landscape";
+
+  if (first?.type === "video") {
+    if (first.platform === "mp4") return "vertical";
+    const src = detectVideoSource(first.url);
+    if (src === "youtube-short" || src === "tiktok" || src === "instagram") return "vertical";
+    return "horizontal";
   }
-  if (!item.gallery?.length && item.videoUrl) {
-    return detectVideoSource(item.videoUrl) === "youtube-short" ? "short" : "landscape";
+
+  if (!item.gallery?.length) {
+    if (item.mp4VideoUrl) return "vertical";
+    if (item.videoUrl) {
+      const src = detectVideoSource(item.videoUrl);
+      return src === "youtube-short" || src === "tiktok" || src === "instagram"
+        ? "vertical"
+        : "horizontal";
+    }
   }
-  return "landscape";
+
+  return "horizontal"; // images, no media
 }
 
 /** Build the lightbox gallery from an item — gallery[] first, then legacy fallback */
@@ -131,7 +142,7 @@ function MediaCard({
   // Static thumbnail (YouTube cards show thumbnail only — iframe loads in popup)
   const thumbnail = getCardThumbnail(item);
 
-  const aspectClass = format === "short" ? "aspect-[9/16]" : "aspect-[16/10]";
+  const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
   const mediaCount = item.gallery?.length ?? 0;
 
   return (
@@ -257,7 +268,7 @@ export default function Portfolio({ items, partnerships = [], content }: Portfol
                   key={item.id}
                   item={item}
                   lang={lang}
-                  format="landscape"
+                  format="horizontal"
                   onClick={() => setSelectedItem(item)}
                 />
               ))}
@@ -270,7 +281,7 @@ export default function Portfolio({ items, partnerships = [], content }: Portfol
               {filtered.map((item) => {
                 const format = getCardFormat(item);
                 return (
-                  <div key={item.id} className={`flex-none px-1.5 ${format === "short" ? "w-[55%]" : "w-[84%]"}`}>
+                  <div key={item.id} className={`flex-none px-1.5 ${format === "vertical" ? "w-[55%]" : "w-[80%]"}`}>
                     <MediaCard item={item} lang={lang} format={format} onClick={() => setSelectedItem(item)} />
                   </div>
                 );
