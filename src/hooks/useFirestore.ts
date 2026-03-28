@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   onSiteContentChange,
   onSocialLinksChange,
@@ -188,19 +188,18 @@ const defaultTestimonials: Testimonial[] = seedTestimonials.map((t, i) => ({
 export function useTestimonials() {
   const [items, setItems] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
-  const seeded = useState(false);
+  const seededRef = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onTestimonialsChange((data) => {
-      if (data.length === 0 && !seeded[0]) {
-        seeded[1](true);
+      if (data.length === 0 && !seededRef.current) {
+        seededRef.current = true;
         Promise.all(seedTestimonials.map((t) => addTestimonial(t))).catch(() => {});
       }
       setItems(data);
       setLoading(false);
     });
     return unsubscribe;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { items: items.length > 0 ? items : defaultTestimonials, loading };

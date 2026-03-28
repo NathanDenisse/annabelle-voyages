@@ -61,13 +61,13 @@ export async function getSiteContent(): Promise<SiteContent | null> {
 
 export function onSiteContentChange(callback: (data: SiteContent | null) => void) {
   const ref = doc(db, COLLECTIONS.CONTENT, "main");
-  return onSnapshot(ref, (snap) => {
-    if (!snap.exists()) {
-      callback(null);
-      return;
-    }
-    callback({ id: snap.id, ...fromTimestamp(snap.data()) } as SiteContent);
-  });
+  return onSnapshot(
+    ref,
+    (snap) => {
+      callback(snap.exists() ? ({ id: snap.id, ...fromTimestamp(snap.data()) } as SiteContent) : null);
+    },
+    () => callback(null)
+  );
 }
 
 export async function updateSiteContent(data: Partial<SiteContent>): Promise<void> {
@@ -85,13 +85,13 @@ export async function getSocialLinks(): Promise<SocialLinks | null> {
 
 export function onSocialLinksChange(callback: (data: SocialLinks | null) => void) {
   const ref = doc(db, COLLECTIONS.SOCIALS, "main");
-  return onSnapshot(ref, (snap) => {
-    if (!snap.exists()) {
-      callback(null);
-      return;
-    }
-    callback({ id: snap.id, ...fromTimestamp(snap.data()) } as SocialLinks);
-  });
+  return onSnapshot(
+    ref,
+    (snap) => {
+      callback(snap.exists() ? ({ id: snap.id, ...fromTimestamp(snap.data()) } as SocialLinks) : null);
+    },
+    () => callback(null)
+  );
 }
 
 export async function updateSocialLinks(data: Partial<SocialLinks>): Promise<void> {
@@ -105,13 +105,13 @@ export function onPortfolioChange(callback: (items: PortfolioItem[]) => void) {
     collection(db, COLLECTIONS.PORTFOLIO),
     orderBy("order", "asc")
   );
-  return onSnapshot(q, (snap: QuerySnapshot) => {
-    const items = snap.docs.map((d) => ({
-      id: d.id,
-      ...fromTimestamp(d.data()),
-    })) as PortfolioItem[];
-    callback(items);
-  });
+  return onSnapshot(
+    q,
+    (snap: QuerySnapshot) => {
+      callback(snap.docs.map((d) => ({ id: d.id, ...fromTimestamp(d.data()) })) as PortfolioItem[]);
+    },
+    () => callback([])
+  );
 }
 
 export async function getPortfolioItems(): Promise<PortfolioItem[]> {
@@ -160,14 +160,15 @@ export async function updatePortfolioOrder(
 export function onPartnershipsChange(callback: (items: Partnership[]) => void) {
   // Do NOT use orderBy("order") — it silently excludes documents without the "order" field.
   // Sort client-side instead to handle seed data or manually inserted docs.
-  return onSnapshot(collection(db, COLLECTIONS.PARTNERSHIPS), (snap: QuerySnapshot) => {
-    const items = snap.docs.map((d) => ({
-      id: d.id,
-      ...fromTimestamp(d.data()),
-    })) as Partnership[];
-    items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    callback(items);
-  });
+  return onSnapshot(
+    collection(db, COLLECTIONS.PARTNERSHIPS),
+    (snap: QuerySnapshot) => {
+      const items = snap.docs.map((d) => ({ id: d.id, ...fromTimestamp(d.data()) })) as Partnership[];
+      items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      callback(items);
+    },
+    () => callback([])
+  );
 }
 
 export async function addPartnership(data: Omit<Partnership, "id">): Promise<string> {
@@ -206,13 +207,13 @@ export function onMessagesChange(callback: (items: ContactMessage[]) => void) {
     collection(db, COLLECTIONS.MESSAGES),
     orderBy("createdAt", "desc")
   );
-  return onSnapshot(q, (snap: QuerySnapshot) => {
-    const items = snap.docs.map((d) => ({
-      id: d.id,
-      ...fromTimestamp(d.data()),
-    })) as ContactMessage[];
-    callback(items);
-  });
+  return onSnapshot(
+    q,
+    (snap: QuerySnapshot) => {
+      callback(snap.docs.map((d) => ({ id: d.id, ...fromTimestamp(d.data()) })) as ContactMessage[]);
+    },
+    () => callback([])
+  );
 }
 
 export async function addContactMessage(
@@ -244,14 +245,15 @@ export async function getUnreadMessagesCount(): Promise<number> {
 
 // --- Testimonials ---
 export function onTestimonialsChange(callback: (items: Testimonial[]) => void) {
-  return onSnapshot(collection(db, COLLECTIONS.TESTIMONIALS), (snap: QuerySnapshot) => {
-    const items = snap.docs.map((d) => ({
-      id: d.id,
-      ...fromTimestamp(d.data()),
-    })) as Testimonial[];
-    items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    callback(items);
-  });
+  return onSnapshot(
+    collection(db, COLLECTIONS.TESTIMONIALS),
+    (snap: QuerySnapshot) => {
+      const items = snap.docs.map((d) => ({ id: d.id, ...fromTimestamp(d.data()) })) as Testimonial[];
+      items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      callback(items);
+    },
+    () => callback([])
+  );
 }
 
 export async function addTestimonial(data: Omit<Testimonial, "id">): Promise<string> {
@@ -326,13 +328,13 @@ export function onStorageTrackingChange(
 // --- Next Trip ---
 export function onNextTripChange(callback: (data: NextTrip | null) => void) {
   const ref = doc(db, COLLECTIONS.NEXT_TRIP, "main");
-  return onSnapshot(ref, (snap) => {
-    if (!snap.exists()) {
-      callback(null);
-      return;
-    }
-    callback({ id: snap.id, ...fromTimestamp(snap.data()) } as NextTrip);
-  });
+  return onSnapshot(
+    ref,
+    (snap) => {
+      callback(snap.exists() ? ({ id: snap.id, ...fromTimestamp(snap.data()) } as NextTrip) : null);
+    },
+    () => callback(null)
+  );
 }
 
 export async function updateNextTrip(data: Partial<NextTrip>): Promise<void> {
