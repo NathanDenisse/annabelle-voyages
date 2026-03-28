@@ -37,10 +37,10 @@ export default function Home() {
         <Navbar />
         <Hero content={content} socials={socials} />
         <About content={content} aboutImageUrl={content.aboutImageUrl} socials={socials} />
-        <NextTrip data={nextTrip} />
         <Portfolio items={portfolioItems} content={content} />
         <Partnerships items={partnerships} content={content} />
         <Testimonials items={testimonials} />
+        <NextTrip data={nextTrip} />
         <Contact content={content} />
         <Footer content={content} socials={socials} />
       </main>

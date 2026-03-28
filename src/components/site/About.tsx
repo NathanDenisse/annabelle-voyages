@@ -40,13 +40,13 @@ export default function About({ content, aboutImageUrl, socials }: AboutProps) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div
           ref={sectionRef}
-          className="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-12 items-center"
+          className="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-12 items-start"
         >
           {/* Image */}
-          <div className={`md:col-span-3 relative transition-all duration-700 ease-out ${
+          <div className={`md:col-span-2 relative transition-all duration-700 ease-out ${
             isInView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-10"
           }`}>
-            <div className="relative aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl">
+            <div className="relative aspect-[4/5] max-h-[400px] md:max-h-[500px] w-full rounded-3xl overflow-hidden shadow-2xl">
               <Image
                 src={imageSrc}
                 alt="Annabelle Cathala"
@@ -66,7 +66,7 @@ export default function About({ content, aboutImageUrl, socials }: AboutProps) {
           </div>
 
           {/* Text content */}
-          <div className={`md:col-span-2 transition-all duration-700 delay-200 ease-out ${
+          <div className={`md:col-span-3 transition-all duration-700 delay-200 ease-out ${
             isInView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-10"
           }`}>
             <p className="font-sans text-xs font-medium text-terracotta-500 tracking-[0.4em] uppercase mb-4">
