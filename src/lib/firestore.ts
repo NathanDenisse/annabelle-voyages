@@ -302,14 +302,25 @@ export async function deleteStorageEntryByUrl(url: string): Promise<void> {
   await Promise.all(promises);
 }
 
-export function onStorageTrackingChange(callback: (entries: StorageTrackingEntry[]) => void) {
-  return onSnapshot(collection(db, COLLECTIONS.STORAGE_TRACKING), (snap: QuerySnapshot) => {
-    const entries = snap.docs.map((d) => ({
-      id: d.id,
-      ...fromTimestamp(d.data()),
-    })) as StorageTrackingEntry[];
-    callback(entries);
-  });
+export function onStorageTrackingChange(
+  callback: (entries: StorageTrackingEntry[]) => void,
+  onError?: () => void
+) {
+  return onSnapshot(
+    collection(db, COLLECTIONS.STORAGE_TRACKING),
+    (snap: QuerySnapshot) => {
+      const entries = snap.docs.map((d) => ({
+        id: d.id,
+        ...fromTimestamp(d.data()),
+      })) as StorageTrackingEntry[];
+      callback(entries);
+    },
+    () => {
+      // Permission denied or network error — resolve with empty state
+      callback([]);
+      onError?.();
+    }
+  );
 }
 
 // --- Next Trip ---

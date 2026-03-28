@@ -35,7 +35,7 @@ import GalleryEditor from "@/components/admin/GalleryEditor";
 import SortableItem from "@/components/admin/SortableItem";
 import toast from "react-hot-toast";
 
-const CATEGORIES: MediaCategory[] = ["hotel", "paysage", "lifestyle", "drone"];
+const CATEGORIES: MediaCategory[] = ["hotel", "paysage", "lifestyle", "drone", "activity"];
 
 const emptyForm = {
   title: { fr: "", en: "" },

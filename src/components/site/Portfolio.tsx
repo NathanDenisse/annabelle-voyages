@@ -22,7 +22,7 @@ interface PortfolioProps {
   content: SiteContent;
 }
 
-const categories: (MediaCategory | "all")[] = ["all", "hotel", "paysage", "lifestyle", "drone"];
+const categories: (MediaCategory | "all")[] = ["all", "hotel", "paysage", "lifestyle", "drone", "activity"];
 
 type CardFormat = "landscape" | "short" | "photo";
 

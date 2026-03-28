@@ -43,7 +43,7 @@ export interface SocialLinks {
   updatedAt?: Date;
 }
 
-export type MediaCategory = "hotel" | "paysage" | "lifestyle" | "drone";
+export type MediaCategory = "hotel" | "paysage" | "lifestyle" | "drone" | "activity";
 
 export interface MediaItem {
   type: "image" | "video";
@@ -155,4 +155,5 @@ export const CATEGORY_LABELS: Record<MediaCategory, LocalizedText> = {
   paysage: { fr: "Paysage", en: "Landscape" },
   lifestyle: { fr: "Lifestyle", en: "Lifestyle" },
   drone: { fr: "Drone", en: "Drone" },
+  activity: { fr: "Activité", en: "Activity" },
 };

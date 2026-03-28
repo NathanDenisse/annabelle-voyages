@@ -63,4 +63,5 @@ export const filterLabels = {
   paysage: { fr: "Paysage", en: "Landscape" },
   lifestyle: { fr: "Lifestyle", en: "Lifestyle" },
   drone: { fr: "Drone", en: "Drone" },
+  activity: { fr: "Activité", en: "Activity" },
 };
