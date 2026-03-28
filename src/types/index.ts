@@ -49,6 +49,10 @@ export interface MediaItem {
   type: "image" | "video";
   url: string;
   platform?: "youtube" | "mp4";
+  /** Orientation of MP4 videos, detected automatically on upload */
+  format?: "vertical" | "horizontal";
+  /** Auto-generated JPEG thumbnail for MP4 videos */
+  thumbnailUrl?: string;
 }
 
 export interface PortfolioItem {

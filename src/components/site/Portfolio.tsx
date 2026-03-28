@@ -87,7 +87,7 @@ function getCardThumbnail(item: PortfolioItem): string {
   const first = item.gallery?.[0];
   if (first) {
     if (first.type === "image") return first.url;
-    if (first.platform === "mp4") return item.thumbnailUrl || ""; // video tag will play
+    if (first.platform === "mp4") return first.thumbnailUrl || item.thumbnailUrl || ""; // video tag will play
     const id = getYouTubeId(first.url);
     return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : "";
   }
@@ -145,18 +145,18 @@ function MediaCard({
           src={thumbnail}
           alt={t(item.title, lang)}
           fill
-          className={`object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
+          className={`object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
           loading="lazy"
         />
       )}
 
-      {/* MP4 autoplay — preload="none" avoids loading every video in the carousel */}
+      {/* MP4 autoplay — preload="auto" loads in background while thumbnail is shown */}
       {isMp4 && mp4CoverSrc && (
         <video
           src={mp4CoverSrc}
-          autoPlay muted loop playsInline preload="none"
+          autoPlay muted loop playsInline preload="auto"
           onCanPlay={() => setMp4Ready(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
         />
       )}
 

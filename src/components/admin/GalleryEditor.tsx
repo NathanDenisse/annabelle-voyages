@@ -19,7 +19,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { uploadSingleImage, uploadVideo, getYouTubeId, detectVideoSource } from "@/lib/storage";
+import { uploadSingleImage, uploadVideo, generateVideoThumbnail, uploadVideoThumbnail, getYouTubeId, detectVideoSource } from "@/lib/storage";
 import { MediaItem } from "@/types";
 import toast from "react-hot-toast";
 
@@ -88,13 +88,23 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
     setUploadingMp4(true);
     setMp4Progress(0);
     try {
+      const ts = Date.now();
       const ext = file.name.split(".").pop() || "mp4";
-      const url = await uploadVideo(
-        file,
-        `${storagePath}/vid-${Date.now()}.${ext}`,
-        (pct) => setMp4Progress(pct)
-      );
-      onChange([...items, { type: "video", url, platform: "mp4" }]);
+      const videoPath = `${storagePath}/vid-${ts}.${ext}`;
+      const thumbPath = `${storagePath}/vid-${ts}-thumb.jpg`;
+
+      // Upload video + generate thumbnail in parallel
+      const [url, thumbBlob] = await Promise.all([
+        uploadVideo(file, videoPath, (pct) => setMp4Progress(pct)),
+        generateVideoThumbnail(file),
+      ]);
+
+      let thumbnailUrl: string | undefined;
+      if (thumbBlob) {
+        thumbnailUrl = await uploadVideoThumbnail(thumbBlob, thumbPath);
+      }
+
+      onChange([...items, { type: "video", url, platform: "mp4", thumbnailUrl }]);
       toast.success("Vidéo MP4 ajoutée !");
     } catch {
       toast.error("Erreur upload MP4.");

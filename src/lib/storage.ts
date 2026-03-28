@@ -152,6 +152,51 @@ export function getYouTubeThumbnail(url: string): string {
   return getVideoThumbnail(url);
 }
 
+/**
+ * Capture a JPEG thumbnail from a video file at ~1 second.
+ * Runs entirely client-side using a hidden <video> + <canvas>.
+ */
+export async function generateVideoThumbnail(videoFile: File): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    const objectUrl = URL.createObjectURL(videoFile);
+    video.src = objectUrl;
+    video.muted = true;
+    video.playsInline = true;
+
+    const cleanup = () => URL.revokeObjectURL(objectUrl);
+
+    video.addEventListener("error", () => { cleanup(); resolve(null); });
+
+    video.addEventListener("loadedmetadata", () => {
+      video.currentTime = Math.min(1, video.duration * 0.1);
+    }, { once: true });
+
+    video.addEventListener("seeked", () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { cleanup(); resolve(null); return; }
+        ctx.drawImage(video, 0, 0);
+        canvas.toBlob((blob) => { cleanup(); resolve(blob); }, "image/jpeg", 0.85);
+      } catch { cleanup(); resolve(null); }
+    }, { once: true });
+
+    video.load();
+  });
+}
+
+/** Upload a video thumbnail JPEG to Firebase Storage. */
+export async function uploadVideoThumbnail(blob: Blob, path: string): Promise<string> {
+  const storageRef = ref(storage, path);
+  await uploadBytes(storageRef, blob);
+  const url = await getDownloadURL(storageRef);
+  addStorageEntry({ fileName: path, fileSize: blob.size, uploadedAt: new Date(), type: "image", url }).catch(() => {});
+  return url;
+}
+
 /** Upload a video file to Firebase Storage with progress callback. */
 export async function uploadVideo(
   file: File,

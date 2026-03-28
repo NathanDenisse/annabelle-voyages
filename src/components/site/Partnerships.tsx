@@ -56,10 +56,11 @@ function PartnershipCard({ item, onClick, forcedAspect }: { item: Partnership; o
     : (!hasGallery ? item.videoUrl : undefined);
   const videoId = youtubeUrl ? getYouTubeId(youtubeUrl) : null;
 
-  // Cover image: gallery[0] if image, else YT thumb, else logo
+  // Cover image: gallery[0] if image, MP4 thumbnail, YT thumb, else logo
   const coverImage = (() => {
     if (hasGallery) {
       if (firstMedia!.type === "image") return firstMedia!.url;
+      if (firstMedia!.platform === "mp4") return firstMedia!.thumbnailUrl || item.logoUrl || null;
       const anyImg = item.gallery!.find((m) => m.type === "image");
       if (anyImg) return anyImg.url;
       if (videoId) return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
@@ -81,18 +82,18 @@ function PartnershipCard({ item, onClick, forcedAspect }: { item: Partnership; o
       {/* Static cover — thumbnail or image; fades out only when MP4 is ready */}
       {coverImage ? (
         <Image src={coverImage} alt={item.name} fill
-          className={`object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
+          className={`object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
           loading="lazy"
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#4A3230] to-[#2A1815]" />
       )}
 
-      {/* MP4 autoplay — preload="none" avoids loading every video in the carousel */}
+      {/* MP4 autoplay — preload="auto" loads in background while thumbnail is shown */}
       {isMp4Cover && mp4Src && (
-        <video src={mp4Src} autoPlay muted loop playsInline preload="none"
+        <video src={mp4Src} autoPlay muted loop playsInline preload="auto"
           onCanPlay={() => setMp4Ready(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
         />
       )}
 
