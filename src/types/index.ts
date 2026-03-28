@@ -121,6 +121,17 @@ export interface Testimonial {
   updatedAt?: Date;
 }
 
+export interface NextTrip {
+  id: string;
+  destination: LocalizedText;
+  period: LocalizedText;
+  places: string[];
+  pitch: LocalizedText;
+  backgroundVideoUrl: string;
+  visible: boolean;
+  updatedAt?: Date;
+}
+
 // Admin form types
 export interface PortfolioItemForm {
   title: LocalizedText;

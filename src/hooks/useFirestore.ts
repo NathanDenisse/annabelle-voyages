@@ -10,6 +10,7 @@ import {
   onStorageTrackingChange,
   onTestimonialsChange,
   addTestimonial,
+  onNextTripChange,
 } from "@/lib/firestore";
 import {
   SiteContent,
@@ -19,6 +20,7 @@ import {
   Partnership,
   ContactMessage,
   Testimonial,
+  NextTrip,
 } from "@/types";
 import { defaultContent, statsLabels } from "@/lib/i18n";
 
@@ -242,4 +244,32 @@ export function useStorageTracking() {
     .reduce((sum, e) => sum + (e.fileSize || 0), 0);
 
   return { entries, loading, totalBytes, todayBytes };
+}
+
+const defaultNextTrip: NextTrip = {
+  id: "main",
+  destination: { fr: "Polynésie Française", en: "French Polynesia" },
+  period: { fr: "Été 2026", en: "Summer 2026" },
+  places: ["Moorea", "Rangiroa", "Bora Bora", "Maupiti", "Fakarava", "Raiatea"],
+  pitch: {
+    fr: "Vous cherchez du contenu authentique depuis le paradis ? Collaborons ensemble.",
+    en: "Looking for authentic content from paradise? Let's collaborate.",
+  },
+  visible: true,
+  backgroundVideoUrl: "",
+};
+
+export function useNextTrip() {
+  const [data, setData] = useState<NextTrip | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onNextTripChange((d) => {
+      setData(d);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  return { data: data ?? defaultNextTrip, loading };
 }

@@ -24,6 +24,7 @@ import {
   Partnership,
   ContactMessage,
   Testimonial,
+  NextTrip,
 } from "@/types";
 
 // Collection names
@@ -36,6 +37,7 @@ export const COLLECTIONS = {
   HERO: "hero",
   STORAGE_TRACKING: "storage_tracking",
   TESTIMONIALS: "testimonials",
+  NEXT_TRIP: "next_trip",
 } as const;
 
 // --- Helpers ---
@@ -308,4 +310,21 @@ export function onStorageTrackingChange(callback: (entries: StorageTrackingEntry
     })) as StorageTrackingEntry[];
     callback(entries);
   });
+}
+
+// --- Next Trip ---
+export function onNextTripChange(callback: (data: NextTrip | null) => void) {
+  const ref = doc(db, COLLECTIONS.NEXT_TRIP, "main");
+  return onSnapshot(ref, (snap) => {
+    if (!snap.exists()) {
+      callback(null);
+      return;
+    }
+    callback({ id: snap.id, ...fromTimestamp(snap.data()) } as NextTrip);
+  });
+}
+
+export async function updateNextTrip(data: Partial<NextTrip>): Promise<void> {
+  const ref = doc(db, COLLECTIONS.NEXT_TRIP, "main");
+  await setDoc(ref, { ...data, updatedAt: serverTimestamp() }, { merge: true });
 }

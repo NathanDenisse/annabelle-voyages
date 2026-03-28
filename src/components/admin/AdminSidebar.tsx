@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronRight,
   Quote,
+  MapPin,
 } from "lucide-react";
 import { logout } from "@/lib/auth";
 import { useRouter } from "next/navigation";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/admin/hero", label: "Hero", icon: Star },
   { href: "/admin/socials", label: "Réseaux sociaux", icon: Share2 },
   { href: "/admin/testimonials", label: "Témoignages", icon: Quote },
+  { href: "/admin/next-trip", label: "Prochain voyage", icon: MapPin },
   { href: "/admin/messages", label: "Messages", icon: MessageSquare },
 ];
 
