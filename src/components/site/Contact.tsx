@@ -53,7 +53,7 @@ export default function Contact({ content }: ContactProps) {
   return (
     <section
       id="contact"
-      className="relative py-12 md:py-16 overflow-hidden bg-[#1A1210]"
+      className="relative py-14 md:py-20 overflow-hidden bg-[#1A1210]"
     >
       <div ref={ref} className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}

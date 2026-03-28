@@ -23,7 +23,7 @@ export default function Footer({ content, socials }: FooterProps) {
   const { lang } = useLanguage();
 
   return (
-    <footer className="bg-[#1A1210] text-white/60 py-14">
+    <footer className="bg-[#1A1210] text-white/60 py-10">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-6">
           {/* Brand */}

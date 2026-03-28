@@ -178,8 +178,8 @@ export default function Portfolio({ items, content }: PortfolioProps) {
 
   const autoScrollPlugin = useRef(AutoScroll({
     speed: 0.6,
-    stopOnInteraction: true,
-    stopOnMouseEnter: true,
+    stopOnInteraction: false,
+    stopOnMouseEnter: false,
     startDelay: 0,
   })).current;
 
@@ -200,7 +200,7 @@ export default function Portfolio({ items, content }: PortfolioProps) {
   const selectedGallery = selectedItem ? buildGallery(selectedItem) : [];
 
   return (
-    <section id="portfolio" className="py-12 md:py-16 bg-cream-100">
+    <section id="portfolio" className="py-14 md:py-20 bg-cream-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div ref={headerRef} className={`text-center mb-8 transition-all duration-700 ease-out ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <p className="font-sans text-xs font-medium text-terracotta-500 tracking-widest uppercase mb-3">{t(content.portfolioTitle, lang)}</p>

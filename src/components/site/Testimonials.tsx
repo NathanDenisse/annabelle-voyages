@@ -91,13 +91,13 @@ function DesktopGrid({ items, lang }: { items: Testimonial[]; lang: "fr" | "en" 
 function MobileCarousel({ items, lang }: { items: Testimonial[]; lang: "fr" | "en" }) {
   const autoScrollPlugin = useRef(AutoScroll({
     speed: 0.6,
-    stopOnInteraction: true,
-    stopOnMouseEnter: true,
+    stopOnInteraction: false,
+    stopOnMouseEnter: false,
     startDelay: 0,
   })).current;
 
   const [emblaRef] = useEmblaCarousel(
-    { loop: true, align: "start", dragFree: true },
+    { loop: true, align: "start", dragFree: true, active: true },
     [autoScrollPlugin]
   );
 
@@ -127,7 +127,7 @@ export default function Testimonials({ items }: TestimonialsProps) {
       {/* Header */}
       <div
         ref={headerRef}
-        className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-8 transition-all duration-700 ease-out ${
+        className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-6 transition-all duration-700 ease-out ${
           isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
         }`}
       >

@@ -36,11 +36,11 @@ export default function About({ content, aboutImageUrl, socials }: AboutProps) {
   const imageSrc = aboutImageUrl || "/images/placeholders/about.svg";
 
   return (
-    <section id="about" className="py-12 md:py-16 overflow-hidden relative bg-gradient-to-br from-cream-100 via-blush-100 to-cream-100">
+    <section id="about" className="py-14 md:py-20 overflow-hidden relative bg-gradient-to-br from-cream-100 via-blush-100 to-cream-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div
           ref={sectionRef}
-          className="grid grid-cols-1 md:grid-cols-5 gap-12 md:gap-16 items-center"
+          className="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-12 items-center"
         >
           {/* Image */}
           <div className={`md:col-span-3 relative transition-all duration-700 ease-out ${
@@ -77,12 +77,12 @@ export default function About({ content, aboutImageUrl, socials }: AboutProps) {
               Annabelle
             </h2>
 
-            <p className="font-sans text-brown-600 leading-relaxed text-base mb-10">
+            <p className="font-sans text-brown-600 leading-relaxed text-base mb-6">
               {t(content.aboutBio, lang)}
             </p>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-3 pt-8 border-t border-blush-200 mb-10">
+            <div className="grid grid-cols-3 gap-3 pt-6 border-t border-blush-200 mb-6">
               {stats.map((stat, i) => (
                 <div
                   key={i}
