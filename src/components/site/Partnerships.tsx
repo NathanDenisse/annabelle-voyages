@@ -49,7 +49,7 @@ function buildPartnershipGallery(item: Partnership): MediaItem[] {
 }
 
 // ─── Card ───
-function PartnershipCard({ item, onClick }: { item: Partnership; onClick: () => void }) {
+function PartnershipCard({ item, onClick, forcedAspect }: { item: Partnership; onClick: () => void; forcedAspect?: string }) {
   const { lang } = useLanguage();
   const [videoLoaded, setVideoLoaded] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -109,7 +109,7 @@ function PartnershipCard({ item, onClick }: { item: Partnership; onClick: () => 
     return () => window.removeEventListener("message", handleMessage);
   }, [embedUrl]);
 
-  const aspectClass = format === "short" ? "aspect-[9/16]" : "aspect-[16/9]";
+  const aspectClass = forcedAspect ?? (format === "short" ? "aspect-[9/16]" : "aspect-[16/9]");
   const mediaCount = item.gallery?.length ?? ((item.images?.length ?? 0) + (item.videoUrl || item.mp4VideoUrl ? 1 : 0));
 
   return (
@@ -212,17 +212,17 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
         </div>
 
         {isDesktop ? (
-          /* ─── Desktop: CSS Grid masonry ─── */
+          /* ─── Desktop: grille uniforme 3 colonnes ─── */
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 items-start">
-              {visible.map((item) => {
-                const isWide = (item.gallery?.length ?? 0) > 5;
-                return (
-                  <div key={item.id} className={isWide ? "col-span-2" : ""}>
-                    <PartnershipCard item={item} onClick={() => setSelectedPartnership(item)} />
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-3 gap-4">
+              {visible.map((item) => (
+                <PartnershipCard
+                  key={item.id}
+                  item={item}
+                  forcedAspect="aspect-video"
+                  onClick={() => setSelectedPartnership(item)}
+                />
+              ))}
             </div>
           </div>
         ) : (

@@ -25,14 +25,33 @@ interface PortfolioProps {
 
 /** Convert a Partnership to a PortfolioItem for unified display in "My Work" */
 function partnershipToItem(p: Partnership): PortfolioItem {
+  // Build gallery: use gallery[] if available, otherwise synthesize from legacy fields
+  const gallery: MediaItem[] =
+    p.gallery && p.gallery.length > 0
+      ? p.gallery
+      : [
+          ...(p.mp4VideoUrl ? [{ type: "video" as const, url: p.mp4VideoUrl, platform: "mp4" as const }] : []),
+          ...(p.videoUrl ? [{ type: "video" as const, url: p.videoUrl, platform: "youtube" as const }] : []),
+          ...((p.images ?? []).map((url): MediaItem => ({ type: "image", url }))),
+        ];
+
+  // Use first image or logo as static thumbnail fallback
+  const imageUrl =
+    (p.images && p.images.length > 0 ? p.images[0] : undefined) ??
+    p.logoUrl ??
+    "";
+
   return {
     id: `partnership-${p.id}`,
     title: { fr: p.name, en: p.name },
     location: "",
     category: "hotel",
     description: p.description,
-    type: p.gallery?.[0]?.type === "video" ? "video" : "image",
-    gallery: p.gallery || [],
+    type: gallery[0]?.type === "video" ? "video" : "image",
+    imageUrl,
+    videoUrl: p.videoUrl,
+    mp4VideoUrl: p.mp4VideoUrl,
+    gallery,
     order: p.order,
     visible: p.visible !== false,
   };
@@ -284,18 +303,18 @@ export default function Portfolio({ items, partnerships = [], content }: Portfol
 
       {filtered.length > 0 ? (
         isDesktop ? (
-          /* ─── Desktop: CSS Grid masonry ─── */
+          /* ─── Desktop: grille uniforme 3 colonnes ─── */
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 items-start">
-              {filtered.map((item) => {
-                const format = getCardFormat(item);
-                const isWide = (item.gallery?.length ?? 0) > 5;
-                return (
-                  <div key={item.id} className={isWide ? "col-span-2" : ""}>
-                    <MediaCard item={item} lang={lang} format={format} onClick={() => setSelectedItem(item)} />
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-3 gap-4">
+              {filtered.map((item) => (
+                <MediaCard
+                  key={item.id}
+                  item={item}
+                  lang={lang}
+                  format="landscape"
+                  onClick={() => setSelectedItem(item)}
+                />
+              ))}
             </div>
           </div>
         ) : (
