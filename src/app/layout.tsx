@@ -3,7 +3,7 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://annabellevoyage.com"),
+  metadataBase: new URL("https://www.annabellevoyage.com"),
   title: "Annabelle Voyage | Travel Content Creator",
   description:
     "French travel content creator based in Dublin. Hotels, landscapes, drone footage & lifestyle content. Available for collaborations worldwide.",
@@ -19,19 +19,19 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Annabelle Cathala" }],
   alternates: {
-    canonical: "https://annabellevoyage.com",
+    canonical: "https://www.annabellevoyage.com",
   },
   openGraph: {
     title: "Annabelle Voyage | Travel Content Creator",
     description:
       "French travel content creator based in Dublin. Hotels, landscapes, drone footage & lifestyle content.",
-    url: "https://annabellevoyage.com",
+    url: "https://www.annabellevoyage.com",
     siteName: "Annabelle Voyage",
     type: "website",
     locale: "en_US",
     images: [
       {
-        url: "https://annabellevoyage.com/og-image.jpg",
+        url: "https://www.annabellevoyage.com/og-image.jpg",
         width: 1200,
         height: 630,
         alt: "Annabelle Voyage - Travel Content Creator",
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     title: "Annabelle Voyage | Travel Content Creator",
     description:
       "French travel content creator based in Dublin. Available for collaborations.",
-    images: ["https://annabellevoyage.com/og-image.jpg"],
+    images: ["https://www.annabellevoyage.com/og-image.jpg"],
   },
   robots: {
     index: true,
@@ -63,7 +63,7 @@ const jsonLd = {
   "@type": "Person",
   name: "Annabelle Cathala",
   alternateName: "Annabelle Voyage",
-  url: "https://annabellevoyage.com",
+  url: "https://www.annabellevoyage.com",
   jobTitle: "Travel Content Creator",
   description:
     "French travel content creator based in Dublin, specializing in hotel and landscape photography and drone videography.",
