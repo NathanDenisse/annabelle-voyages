@@ -3,23 +3,79 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  title: "Annabelle Voyage — Travel Content Creator",
+  metadataBase: new URL("https://annabellevoyage.com"),
+  title: "Annabelle Voyage | Travel Content Creator",
   description:
-    "French in Dublin, travel content creator. Hotel and lifestyle brand partnerships.",
-  keywords: ["voyage", "travel", "content creator", "Dublin", "photo", "video", "drone"],
+    "French travel content creator based in Dublin. Hotels, landscapes, drone footage & lifestyle content. Available for collaborations worldwide.",
+  keywords: [
+    "travel content creator",
+    "hotel photography",
+    "drone videography",
+    "travel influencer",
+    "Dublin",
+    "French Polynesia",
+    "collaboration",
+    "Annabelle Cathala",
+  ],
   authors: [{ name: "Annabelle Cathala" }],
+  alternates: {
+    canonical: "https://annabellevoyage.com",
+  },
   openGraph: {
-    title: "Annabelle Voyage",
-    description: "French in Dublin · Travel Content Creator",
+    title: "Annabelle Voyage | Travel Content Creator",
+    description:
+      "French travel content creator based in Dublin. Hotels, landscapes, drone footage & lifestyle content.",
+    url: "https://annabellevoyage.com",
+    siteName: "Annabelle Voyage",
     type: "website",
     locale: "en_US",
-    siteName: "Annabelle Voyage",
+    images: [
+      {
+        url: "https://annabellevoyage.com/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Annabelle Voyage - Travel Content Creator",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Annabelle Voyage",
-    description: "French in Dublin · Travel Content Creator",
+    title: "Annabelle Voyage | Travel Content Creator",
+    description:
+      "French travel content creator based in Dublin. Available for collaborations.",
+    images: ["https://annabellevoyage.com/og-image.jpg"],
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Annabelle Cathala",
+  alternateName: "Annabelle Voyage",
+  url: "https://annabellevoyage.com",
+  jobTitle: "Travel Content Creator",
+  description:
+    "French travel content creator based in Dublin, specializing in hotel and landscape photography and drone videography.",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Dublin",
+    addressCountry: "IE",
+  },
+  sameAs: [
+    "https://www.instagram.com/annabellecathala",
+    "https://www.youtube.com/@annabellecathala",
+  ],
 };
 
 export default function RootLayout({
@@ -31,14 +87,16 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.ico" />
-        {/* Preconnect to Google Fonts for fast loading */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Preload critical fonts to avoid FOUT */}
         <link
           rel="preload"
           href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=DM+Sans:wght@300;400;500;600&display=swap"
           as="style"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
       <body>

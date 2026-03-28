@@ -88,10 +88,11 @@ export default function Contact({ content }: ContactProps) {
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block font-sans text-xs font-medium text-white/50 mb-2 tracking-wide uppercase">
+              <label htmlFor="contact-name" className="block font-sans text-xs font-medium text-white/50 mb-2 tracking-wide uppercase">
                 {lang === "fr" ? "Nom" : "Name"}
               </label>
               <input
+                id="contact-name"
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -101,10 +102,11 @@ export default function Contact({ content }: ContactProps) {
               />
             </div>
             <div>
-              <label className="block font-sans text-xs font-medium text-white/50 mb-2 tracking-wide uppercase">
+              <label htmlFor="contact-email" className="block font-sans text-xs font-medium text-white/50 mb-2 tracking-wide uppercase">
                 Email
               </label>
               <input
+                id="contact-email"
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -116,10 +118,11 @@ export default function Contact({ content }: ContactProps) {
           </div>
 
           <div className="mb-8">
-            <label className="block font-sans text-xs font-medium text-white/50 mb-2 tracking-wide uppercase">
+            <label htmlFor="contact-message" className="block font-sans text-xs font-medium text-white/50 mb-2 tracking-wide uppercase">
               Message
             </label>
             <textarea
+              id="contact-message"
               value={form.message}
               onChange={(e) => setForm({ ...form, message: e.target.value })}
               required

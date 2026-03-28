@@ -50,7 +50,7 @@ export default function About({ content, aboutImageUrl, socials }: AboutProps) {
             <div className="relative aspect-[4/5] max-h-[400px] md:max-h-[500px] w-full rounded-3xl overflow-hidden shadow-2xl">
               <Image
                 src={imageSrc}
-                alt="Annabelle Cathala"
+                alt="Annabelle Cathala - Travel Content Creator based in Dublin"
                 fill
                 className="object-cover"
                 loading="lazy"
