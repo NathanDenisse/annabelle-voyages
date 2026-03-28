@@ -7,6 +7,7 @@ import { Instagram, Youtube } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
 import { SiteContent, SocialLinks } from "@/types";
+import ScrollTeaser from "./ScrollTeaser";
 
 interface AboutProps {
   content: SiteContent;
@@ -141,6 +142,11 @@ export default function About({ content, aboutImageUrl, socials }: AboutProps) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Teaser */}
+      <div className="relative z-10 flex justify-center pt-10 pb-6">
+        <ScrollTeaser textFr="Découvrir mon travail ↓" textEn="Discover my work ↓" target="#portfolio" light />
       </div>
     </section>
   );

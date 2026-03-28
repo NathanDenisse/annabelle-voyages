@@ -9,6 +9,7 @@ import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t, filterLabels } from "@/lib/i18n";
 import { PortfolioItem, MediaCategory, MediaItem, SiteContent, CATEGORY_LABELS } from "@/types";
+import ScrollTeaser from "./ScrollTeaser";
 import {
   detectVideoSource,
   getVideoThumbnail,
@@ -200,7 +201,7 @@ export default function Portfolio({ items, content }: PortfolioProps) {
   const selectedGallery = selectedItem ? buildGallery(selectedItem) : [];
 
   return (
-    <section id="portfolio" className="py-14 md:py-20 bg-cream-100">
+    <section id="portfolio" className="relative py-14 md:py-20 bg-cream-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div ref={headerRef} className={`text-center mb-8 transition-all duration-700 ease-out ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <p className="font-sans text-xs font-medium text-terracotta-500 tracking-widest uppercase mb-3">{t(content.portfolioTitle, lang)}</p>
@@ -250,6 +251,14 @@ export default function Portfolio({ items, content }: PortfolioProps) {
           {lang === "fr" ? "Aucun contenu dans cette catégorie" : "No content in this category"}
         </p>
       )}
+
+      {/* Gradient transition → Partnerships */}
+      <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-b from-transparent to-[#2C2220] pointer-events-none" />
+
+      {/* Teaser */}
+      <div className="relative z-10 flex justify-center pt-10 pb-6">
+        <ScrollTeaser textFr="Ils m'ont fait confiance ↓" textEn="They trusted me ↓" target="#partnerships" light />
+      </div>
 
       <AnimatePresence>
         {selectedItem && selectedGallery.length > 0 && (

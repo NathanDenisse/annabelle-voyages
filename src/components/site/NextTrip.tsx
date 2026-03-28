@@ -5,6 +5,7 @@ import { useInView } from "framer-motion";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
 import { NextTrip as NextTripType } from "@/types";
+import ScrollTeaser from "./ScrollTeaser";
 
 interface NextTripProps {
   data: NextTripType;
@@ -120,7 +121,15 @@ export default function NextTrip({ data }: NextTripProps) {
         >
           {lang === "fr" ? "Me contacter" : "Get in touch"}
         </button>
+
+        {/* Teaser */}
+        <div className="mt-10">
+          <ScrollTeaser textFr="Collaborons ensemble ↓" textEn="Let's work together ↓" target="#contact" light={false} />
+        </div>
       </div>
+
+      {/* Gradient transition → Contact */}
+      <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-b from-transparent to-[#1A1210] pointer-events-none" />
     </section>
   );
 }

@@ -8,6 +8,7 @@ import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
 import { Partnership, SiteContent, MediaItem } from "@/types";
+import ScrollTeaser from "./ScrollTeaser";
 import { getYouTubeId, detectVideoSource } from "@/lib/storage";
 import MediaLightbox from "./MediaLightbox";
 
@@ -209,6 +210,14 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
             </div>
           </div>
         )}
+
+        {/* Gradient transition → Testimonials */}
+        <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-b from-transparent to-[#F8F0EB] pointer-events-none" />
+
+        {/* Teaser */}
+        <div className="relative z-10 flex justify-center pt-10 pb-6">
+          <ScrollTeaser textFr="Ce qu'ils en disent ↓" textEn="What they say ↓" target="#testimonials" light={false} />
+        </div>
       </section>
 
       <AnimatePresence>
