@@ -28,7 +28,7 @@ import {
   updatePortfolioOrder,
 } from "@/lib/firestore";
 import { PortfolioItem, MediaCategory, MediaItem, CATEGORY_LABELS } from "@/types";
-import { getYouTubeId, deleteFileByUrl } from "@/lib/storage";
+import { getYouTubeId } from "@/lib/storage";
 import SmartBilingualField from "@/components/admin/SmartBilingualField";
 import GalleryEditor from "@/components/admin/GalleryEditor";
 import SortableItem from "@/components/admin/SortableItem";
@@ -79,7 +79,7 @@ export default function PortfolioAdmin() {
       location: item.location,
       category: item.category,
       description: item.description,
-      gallery: item.gallery || [],
+      gallery: item.gallery,
       visible: item.visible,
     });
     setEditingId(item.id);
@@ -94,26 +94,12 @@ export default function PortfolioAdmin() {
 
     setSaving(true);
     try {
-      const fullGallery: MediaItem[] = form.gallery;
-
-      // Derive legacy fields from gallery[0] (cover) for backward compat
-      const cover = fullGallery[0] ?? null;
-      const imageUrl = cover?.type === "image" ? cover.url : "";
-      const mp4VideoUrl = cover?.platform === "mp4" ? cover.url : "";
-      const videoUrl = cover?.platform === "youtube" ? cover.url : "";
-      const type: "image" | "video" = cover?.type === "video" ? "video" : "image";
-
       const data = {
         title: form.title,
         location: form.location,
         category: form.category,
         description: form.description,
-        type,
-        imageUrl,
-        thumbnailUrl: "",
-        mp4VideoUrl,
-        videoUrl,
-        gallery: fullGallery,
+        gallery: form.gallery,
         visible: form.visible,
         order: editingId
           ? (items.find((i) => i.id === editingId)?.order ?? items.length)
@@ -140,11 +126,6 @@ export default function PortfolioAdmin() {
 
   const handleDelete = async (id: string) => {
     try {
-      const item = items.find((i) => i.id === id);
-      if (item) {
-        if (item.imageUrl) await deleteFileByUrl(item.imageUrl);
-        if (item.thumbnailUrl) await deleteFileByUrl(item.thumbnailUrl);
-      }
       await deletePortfolioItem(id);
       toast.success("Média supprimé.");
       setDeleteConfirm(null);
@@ -159,21 +140,16 @@ export default function PortfolioAdmin() {
   };
 
   const getListThumbnail = (item: PortfolioItem) => {
-    const first = item.gallery?.[0];
-    if (first?.type === "image") return first.url;
-    if (first?.platform === "youtube") {
-      const id = getYouTubeId(first.url);
-      if (id) return `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
-    }
-    if (item.videoUrl) {
-      const id = getYouTubeId(item.videoUrl);
-      if (id) return `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
-    }
-    return item.thumbnailUrl || item.imageUrl || "/images/placeholders/portfolio.svg";
+    const first = item.gallery[0];
+    if (!first) return "/images/placeholders/portfolio.svg";
+    if (first.type === "image") return first.url;
+    if (first.platform === "mp4") return first.thumbnailUrl || "/images/placeholders/portfolio.svg";
+    const id = getYouTubeId(first.url);
+    return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : "/images/placeholders/portfolio.svg";
   };
 
   const getListBadge = (item: PortfolioItem) => {
-    const first = item.gallery?.[0];
+    const first = item.gallery[0];
     if (first?.platform === "mp4") return "MP4";
     if (first?.platform === "youtube") return "YT";
     if (first?.type === "image") return "Photo";

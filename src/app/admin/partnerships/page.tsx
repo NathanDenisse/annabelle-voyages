@@ -78,7 +78,7 @@ export default function PartnershipsAdmin() {
       name: item.name,
       description: item.description,
       logoUrl: item.logoUrl || "",
-      gallery: item.gallery || [],
+      gallery: item.gallery,
       externalLink: item.externalLink,
       visible: item.visible,
     });
@@ -107,21 +107,11 @@ export default function PartnershipsAdmin() {
     }
     setSaving(true);
     try {
-      const fullGallery: MediaItem[] = form.gallery;
-
-      // Derive legacy fields from gallery[0] (cover) for backward compat
-      const cover = fullGallery[0] ?? null;
-      const mp4VideoUrl = cover?.platform === "mp4" ? cover.url : "";
-      const videoUrl = cover?.platform === "youtube" ? cover.url : "";
-
       const data = {
         name: form.name,
         description: form.description,
         logoUrl: form.logoUrl || "",
-        images: [] as string[],
-        videoUrl,
-        mp4VideoUrl,
-        gallery: fullGallery,
+        gallery: form.gallery,
         externalLink: form.externalLink,
         visible: form.visible,
         order: editingId
@@ -164,17 +154,12 @@ export default function PartnershipsAdmin() {
   };
 
   const getListThumbnail = (item: Partnership) => {
-    const first = item.gallery?.[0];
-    if (first?.type === "image") return first.url;
-    if (first?.platform === "youtube") {
-      const id = getYouTubeId(first.url);
-      if (id) return `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
-    }
-    if (item.videoUrl) {
-      const id = getYouTubeId(item.videoUrl);
-      if (id) return `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
-    }
-    return item.logoUrl || null;
+    const first = item.gallery[0];
+    if (!first) return item.logoUrl || null;
+    if (first.type === "image") return first.url;
+    if (first.platform === "mp4") return first.thumbnailUrl || item.logoUrl || null;
+    const id = getYouTubeId(first.url);
+    return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : item.logoUrl || null;
   };
 
   return (

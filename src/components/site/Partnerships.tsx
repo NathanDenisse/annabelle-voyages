@@ -7,7 +7,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
-import { Partnership, SiteContent, MediaItem } from "@/types";
+import { Partnership, SiteContent } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
 import { detectVideoSource, getYouTubeId } from "@/lib/storage";
 import ItemModal from "./ItemModal";
@@ -32,70 +32,36 @@ function useBreakpoint() {
 type CardFormat = "vertical" | "horizontal";
 
 function getPartnershipFormat(item: Partnership): CardFormat {
-  const first = item.gallery && item.gallery.length > 0 ? item.gallery[0] : null;
-
-  // Rule 1 — gallery[0] exists: its type/platform is authoritative
-  if (first) {
-    if (first.platform === "mp4") return "vertical";
-    if (first.platform === "youtube") {
-      return detectVideoSource(first.url) === "youtube-short" ? "vertical" : "horizontal";
-    }
-    return "horizontal"; // image or unrecognised platform
+  const first = item.gallery[0];
+  if (!first) return "horizontal";
+  if (first.format) return first.format;
+  if (first.platform === "mp4") return "vertical";
+  if (first.platform === "youtube") {
+    return detectVideoSource(first.url) === "youtube-short" ? "vertical" : "horizontal";
   }
-
-  // Rule 2 — no gallery: fall back to legacy fields
-  if (item.mp4VideoUrl) return "vertical";
-  if (item.videoUrl) {
-    return detectVideoSource(item.videoUrl) === "youtube-short" ? "vertical" : "horizontal";
-  }
-
-  return "horizontal"; // images/logo only or no media
+  return "horizontal";
 }
 
-/** Build lightbox gallery — gallery[] first, then legacy fallback */
-function buildPartnershipGallery(item: Partnership): MediaItem[] {
-  if (item.gallery && item.gallery.length > 0) return item.gallery;
-  const result: MediaItem[] = [];
-  if (item.mp4VideoUrl) result.push({ type: "video", url: item.mp4VideoUrl, platform: "mp4" });
-  if (item.videoUrl) result.push({ type: "video", url: item.videoUrl, platform: "youtube" });
-  if (item.images) item.images.forEach((url) => result.push({ type: "image", url }));
-  return result;
-}
 
 // ─── Card ───
 function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partnership; onClick: () => void; format?: CardFormat }) {
   const { lang } = useLanguage();
   const [mp4Ready, setMp4Ready] = useState(false);
 
-  // Determine cover from gallery or legacy fields
-  const hasGallery = item.gallery && item.gallery.length > 0;
-  const firstMedia = hasGallery ? item.gallery![0] : null;
-  const isMp4Cover = firstMedia?.platform === "mp4" || (!hasGallery && !!item.mp4VideoUrl);
-  const mp4Src = firstMedia?.platform === "mp4" ? firstMedia.url : (!hasGallery ? item.mp4VideoUrl : undefined);
+  const firstMedia = item.gallery[0] ?? null;
+  const isMp4Cover = firstMedia?.platform === "mp4";
+  const mp4Src = firstMedia?.platform === "mp4" ? firstMedia.url : undefined;
 
-  // YouTube video ID — used only for thumbnail (no autoplay in card)
-  const youtubeUrl = firstMedia?.type === "video" && firstMedia.platform === "youtube"
-    ? firstMedia.url
-    : (!hasGallery ? item.videoUrl : undefined);
-  const videoId = youtubeUrl ? getYouTubeId(youtubeUrl) : null;
-
-  // Cover image: gallery[0] if image, MP4 thumbnail, YT thumb, else logo
   const coverImage = (() => {
-    if (hasGallery) {
-      if (firstMedia!.type === "image") return firstMedia!.url;
-      if (firstMedia!.platform === "mp4") return firstMedia!.thumbnailUrl || item.logoUrl || null;
-      const anyImg = item.gallery!.find((m) => m.type === "image");
-      if (anyImg) return anyImg.url;
-      if (videoId) return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-      return item.logoUrl || null;
-    }
-    if (videoId) return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-    if (item.images && item.images.length > 0) return item.images[0];
-    return item.logoUrl || null;
+    if (!firstMedia) return item.logoUrl || null;
+    if (firstMedia.type === "image") return firstMedia.url;
+    if (firstMedia.platform === "mp4") return firstMedia.thumbnailUrl || item.logoUrl || null;
+    const videoId = getYouTubeId(firstMedia.url);
+    return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : item.logoUrl || null;
   })();
 
   const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
-  const mediaCount = item.gallery?.length ?? ((item.images?.length ?? 0) + (item.videoUrl || item.mp4VideoUrl ? 1 : 0));
+  const mediaCount = item.gallery.length;
 
   return (
     <div
@@ -170,7 +136,7 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
 
   if (visible.length === 0) return null;
 
-  const selectedGallery = selectedPartnership ? buildPartnershipGallery(selectedPartnership) : [];
+  const selectedGallery = selectedPartnership?.gallery ?? [];
 
   return (
     <>

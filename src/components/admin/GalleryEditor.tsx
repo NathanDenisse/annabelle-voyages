@@ -104,7 +104,7 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
         thumbnailUrl = await uploadVideoThumbnail(thumbBlob, thumbPath);
       }
 
-      onChange([...items, { type: "video", url, platform: "mp4", thumbnailUrl }]);
+      onChange([...items, { type: "video", url, platform: "mp4", thumbnailUrl, format: "vertical" }]);
       toast.success("Vidéo MP4 ajoutée !");
     } catch {
       toast.error("Erreur upload MP4.");
@@ -122,7 +122,8 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
       toast.error("Lien YouTube invalide.");
       return;
     }
-    onChange([...items, { type: "video", url, platform: "youtube" }]);
+    const ytFormat = detectVideoSource(url) === "youtube-short" ? "vertical" : "horizontal";
+    onChange([...items, { type: "video", url, platform: "youtube", format: ytFormat }]);
     setYoutubeUrl("");
     setShowYouTubeInput(false);
     toast.success("Lien YouTube ajouté !");

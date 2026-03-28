@@ -21,8 +21,95 @@ import {
   ContactMessage,
   Testimonial,
   NextTrip,
+  MediaItem,
+  LocalizedText,
+  MediaCategory,
 } from "@/types";
 import { defaultContent, statsLabels } from "@/lib/i18n";
+
+// ─── Normalization helpers ────────────────────────────────────────────────────
+// Firestore documents may still contain legacy fields (imageUrl, videoUrl,
+// mp4VideoUrl, images[]). These helpers build gallery[] from those fields
+// so the rest of the app always sees a clean, normalized object.
+
+function buildGalleryFromLegacyPortfolio(raw: Record<string, unknown>): MediaItem[] {
+  const items: MediaItem[] = [];
+  const mp4Url = raw.mp4VideoUrl as string | undefined;
+  const videoUrl = raw.videoUrl as string | undefined;
+  const imageUrl = raw.imageUrl as string | undefined;
+  const thumbUrl = raw.thumbnailUrl as string | undefined;
+
+  if (mp4Url) {
+    items.push({ type: "video", url: mp4Url, platform: "mp4", format: "vertical", thumbnailUrl: thumbUrl });
+  }
+  if (videoUrl) {
+    const isShort = /youtube\.com\/shorts\//.test(videoUrl);
+    items.push({ type: "video", url: videoUrl, platform: "youtube", format: isShort ? "vertical" : "horizontal" });
+  }
+  if (imageUrl) {
+    items.push({ type: "image", url: imageUrl });
+  }
+  return items;
+}
+
+function buildGalleryFromLegacyPartnership(raw: Record<string, unknown>): MediaItem[] {
+  const items: MediaItem[] = [];
+  const mp4Url = raw.mp4VideoUrl as string | undefined;
+  const videoUrl = raw.videoUrl as string | undefined;
+  const images = raw.images as string[] | undefined;
+
+  if (mp4Url) {
+    items.push({ type: "video", url: mp4Url, platform: "mp4", format: "vertical" });
+  }
+  if (videoUrl) {
+    const isShort = /youtube\.com\/shorts\//.test(videoUrl);
+    items.push({ type: "video", url: videoUrl, platform: "youtube", format: isShort ? "vertical" : "horizontal" });
+  }
+  if (images && images.length > 0) {
+    images.forEach((url) => items.push({ type: "image", url }));
+  }
+  return items;
+}
+
+function normalizePortfolio(items: PortfolioItem[]): PortfolioItem[] {
+  return items.map((item) => {
+    const raw = item as unknown as Record<string, unknown>;
+    const hasGallery = Array.isArray(raw.gallery) && (raw.gallery as unknown[]).length > 0;
+    return {
+      id: item.id,
+      title: (raw.title as LocalizedText) || { fr: "", en: "" },
+      description: (raw.description as LocalizedText) || { fr: "", en: "" },
+      location: (raw.location as string) || "",
+      category: (raw.category as MediaCategory) || "hotel",
+      gallery: hasGallery ? (raw.gallery as MediaItem[]) : buildGalleryFromLegacyPortfolio(raw),
+      visible: (raw.visible as boolean) !== false,
+      order: (raw.order as number) ?? 0,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    };
+  });
+}
+
+function normalizePartnerships(items: Partnership[]): Partnership[] {
+  return items.map((item) => {
+    const raw = item as unknown as Record<string, unknown>;
+    const hasGallery = Array.isArray(raw.gallery) && (raw.gallery as unknown[]).length > 0;
+    return {
+      id: item.id,
+      name: (raw.name as string) || "",
+      description: (raw.description as LocalizedText) || { fr: "", en: "" },
+      logoUrl: (raw.logoUrl as string) || "",
+      gallery: hasGallery ? (raw.gallery as MediaItem[]) : buildGalleryFromLegacyPartnership(raw),
+      externalLink: (raw.externalLink as string) || "",
+      visible: (raw.visible as boolean) !== false,
+      order: (raw.order as number) ?? 0,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    };
+  });
+}
+
+// ─── Hooks ────────────────────────────────────────────────────────────────────
 
 export function useSiteContent() {
   const [content, setContent] = useState<SiteContent | null>(null);
@@ -36,7 +123,6 @@ export function useSiteContent() {
     return unsubscribe;
   }, []);
 
-  // Return defaults if Firestore has no data yet
   const safeContent: SiteContent = content ?? {
     id: "main",
     heroTagline: defaultContent.heroTagline,
@@ -88,7 +174,7 @@ export function usePortfolio() {
 
   useEffect(() => {
     const unsubscribe = onPortfolioChange((data) => {
-      setItems(data);
+      setItems(normalizePortfolio(data));
       setLoading(false);
     });
     return unsubscribe;
@@ -105,7 +191,15 @@ const defaultPartnerships: Partnership[] = [
       fr: "Premier partenariat — séjour en collaboration dans les magnifiques Florida Keys.",
       en: "First partnership — collaborative stay in the beautiful Florida Keys.",
     },
-    videoUrl: "https://www.youtube.com/watch?v=jkOtTMXUR54",
+    logoUrl: "",
+    gallery: [
+      {
+        type: "video",
+        url: "https://www.youtube.com/watch?v=jkOtTMXUR54",
+        platform: "youtube",
+        format: "horizontal",
+      },
+    ],
     externalLink: "https://www.pinesandpalms.com",
     order: 0,
     visible: true,
@@ -118,7 +212,7 @@ export function usePartnerships() {
 
   useEffect(() => {
     const unsubscribe = onPartnershipsChange((data) => {
-      setItems(data);
+      setItems(normalizePartnerships(data));
       setLoading(false);
     });
     return unsubscribe;

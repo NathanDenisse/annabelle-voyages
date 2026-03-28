@@ -49,26 +49,22 @@ export interface MediaItem {
   type: "image" | "video";
   url: string;
   platform?: "youtube" | "mp4";
-  /** Orientation of MP4 videos, detected automatically on upload */
-  format?: "vertical" | "horizontal";
   /** Auto-generated JPEG thumbnail for MP4 videos */
   thumbnailUrl?: string;
+  /** Orientation detected at upload time or set by migration */
+  format?: "vertical" | "horizontal";
 }
 
 export interface PortfolioItem {
   id: string;
   title: LocalizedText;
+  description: LocalizedText;
   location: string;
   category: MediaCategory;
-  description: LocalizedText;
-  type: "image" | "video";
-  imageUrl?: string;
-  thumbnailUrl?: string;
-  videoUrl?: string; // YouTube/TikTok URL
-  mp4VideoUrl?: string; // Direct MP4 from Firebase Storage
-  gallery?: MediaItem[]; // Multi-media gallery
-  order: number;
+  /** All media. gallery[0] is the cover. */
+  gallery: MediaItem[];
   visible: boolean;
+  order: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -77,14 +73,12 @@ export interface Partnership {
   id: string;
   name: string;
   description: LocalizedText;
-  logoUrl?: string;
-  images?: string[];
-  videoUrl?: string; // YouTube URL
-  mp4VideoUrl?: string; // Direct MP4 from Firebase Storage
-  gallery?: MediaItem[]; // Multi-media gallery
+  logoUrl: string;
+  /** All media. gallery[0] is the cover. */
+  gallery: MediaItem[];
   externalLink: string;
-  order: number;
   visible: boolean;
+  order: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -134,24 +128,6 @@ export interface NextTrip {
   backgroundVideoUrl: string;
   visible: boolean;
   updatedAt?: Date;
-}
-
-// Admin form types
-export interface PortfolioItemForm {
-  title: LocalizedText;
-  location: string;
-  category: MediaCategory;
-  description: LocalizedText;
-  type: "image" | "video";
-  videoUrl?: string;
-  visible: boolean;
-}
-
-export interface PartnershipForm {
-  name: string;
-  description: LocalizedText;
-  externalLink: string;
-  visible: boolean;
 }
 
 export const CATEGORY_LABELS: Record<MediaCategory, LocalizedText> = {

@@ -8,11 +8,10 @@ import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t, filterLabels } from "@/lib/i18n";
-import { PortfolioItem, Partnership, MediaCategory, MediaItem, SiteContent, CATEGORY_LABELS } from "@/types";
+import { PortfolioItem, Partnership, MediaCategory, SiteContent, CATEGORY_LABELS } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
 import {
   detectVideoSource,
-  getVideoThumbnail,
   getYouTubeId,
 } from "@/lib/storage";
 import ItemModal from "./ItemModal";
@@ -25,33 +24,13 @@ interface PortfolioProps {
 
 /** Convert a Partnership to a PortfolioItem for unified display in "My Work" */
 function partnershipToItem(p: Partnership): PortfolioItem {
-  // Build gallery: use gallery[] if available, otherwise synthesize from legacy fields
-  const gallery: MediaItem[] =
-    p.gallery && p.gallery.length > 0
-      ? p.gallery
-      : [
-          ...(p.mp4VideoUrl ? [{ type: "video" as const, url: p.mp4VideoUrl, platform: "mp4" as const }] : []),
-          ...(p.videoUrl ? [{ type: "video" as const, url: p.videoUrl, platform: "youtube" as const }] : []),
-          ...((p.images ?? []).map((url): MediaItem => ({ type: "image", url }))),
-        ];
-
-  // Use first image or logo as static thumbnail fallback
-  const imageUrl =
-    (p.images && p.images.length > 0 ? p.images[0] : undefined) ??
-    p.logoUrl ??
-    "";
-
   return {
     id: `partnership-${p.id}`,
     title: { fr: p.name, en: p.name },
     location: "",
     category: "hotel",
     description: p.description,
-    type: gallery[0]?.type === "video" ? "video" : "image",
-    imageUrl,
-    videoUrl: p.videoUrl,
-    mp4VideoUrl: p.mp4VideoUrl,
-    gallery,
+    gallery: p.gallery,
     order: p.order,
     visible: p.visible !== false,
   };
@@ -62,47 +41,26 @@ const categories: (MediaCategory | "all")[] = ["all", "hotel", "paysage", "lifes
 type CardFormat = "vertical" | "horizontal";
 
 function getCardFormat(item: PortfolioItem): CardFormat {
-  const first = item.gallery?.[0];
-
-  // Rule 1 — gallery[0] exists: its type/platform is authoritative
-  if (first) {
-    if (first.platform === "mp4") return "vertical";
-    if (first.platform === "youtube") {
-      return detectVideoSource(first.url) === "youtube-short" ? "vertical" : "horizontal";
-    }
-    return "horizontal"; // image or unrecognised platform
+  const first = item.gallery[0];
+  if (!first) return "horizontal";
+  // Use stored format if set (upload or migration)
+  if (first.format) return first.format;
+  // Fallback detection from platform / URL
+  if (first.platform === "mp4") return "vertical";
+  if (first.platform === "youtube") {
+    return detectVideoSource(first.url) === "youtube-short" ? "vertical" : "horizontal";
   }
-
-  // Rule 2 — no gallery: fall back to legacy fields
-  if (item.mp4VideoUrl) return "vertical";
-  if (item.videoUrl) {
-    return detectVideoSource(item.videoUrl) === "youtube-short" ? "vertical" : "horizontal";
-  }
-
-  return "horizontal"; // imageUrl only or no media
+  return "horizontal";
 }
 
-/** Build the lightbox gallery from an item — gallery[] first, then legacy fallback */
-function buildGallery(item: PortfolioItem): MediaItem[] {
-  if (item.gallery && item.gallery.length > 0) return item.gallery;
-  if (item.mp4VideoUrl) return [{ type: "video", url: item.mp4VideoUrl, platform: "mp4" }];
-  if (item.videoUrl) return [{ type: "video", url: item.videoUrl, platform: "youtube" }];
-  if (item.imageUrl) return [{ type: "image", url: item.imageUrl }];
-  return [];
-}
-
-/** Card cover thumbnail — follows priority: gallery[0] → mp4VideoUrl → videoUrl → imageUrl */
+/** Card cover thumbnail — gallery[0] is the only source */
 function getCardThumbnail(item: PortfolioItem): string {
-  const first = item.gallery?.[0];
-  if (first) {
-    if (first.type === "image") return first.url;
-    if (first.platform === "mp4") return first.thumbnailUrl || item.thumbnailUrl || ""; // video tag will play
-    const id = getYouTubeId(first.url);
-    return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : "";
-  }
-  if (item.mp4VideoUrl) return item.thumbnailUrl || "";
-  if (item.videoUrl) return getVideoThumbnail(item.videoUrl);
-  return item.thumbnailUrl || item.imageUrl || "/images/placeholders/portfolio.svg";
+  const first = item.gallery[0];
+  if (!first) return "/images/placeholders/portfolio.svg";
+  if (first.type === "image") return first.url;
+  if (first.platform === "mp4") return first.thumbnailUrl || "";
+  const id = getYouTubeId(first.url);
+  return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : "";
 }
 
 function useBreakpoint() {
@@ -130,18 +88,13 @@ function MediaCard({
 }) {
   const [mp4Ready, setMp4Ready] = useState(false);
 
-  const hasGallery = item.gallery && item.gallery.length > 0;
-  const firstMedia = hasGallery ? item.gallery![0] : null;
-  // MP4 cover: gallery[0] if MP4, else legacy mp4VideoUrl
-  const mp4CoverSrc = firstMedia?.platform === "mp4"
-    ? firstMedia.url
-    : (!hasGallery ? (item.mp4VideoUrl || null) : null);
+  const firstMedia = item.gallery[0] ?? null;
+  const mp4CoverSrc = firstMedia?.platform === "mp4" ? firstMedia.url : null;
   const isMp4 = !!mp4CoverSrc;
-  // Static thumbnail (YouTube cards show thumbnail only — iframe loads in popup)
   const thumbnail = getCardThumbnail(item);
 
   const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
-  const mediaCount = item.gallery?.length ?? 0;
+  const mediaCount = item.gallery.length;
 
   return (
     <div
@@ -235,7 +188,7 @@ export default function Portfolio({ items, partnerships = [], content }: Portfol
     if (emblaApi) emblaApi.reInit();
   }, [activeCategory, emblaApi, isDesktop]);
 
-  const selectedGallery = selectedItem ? buildGallery(selectedItem) : [];
+  const selectedGallery = selectedItem?.gallery ?? [];
 
   return (
     <section id="portfolio" className="relative py-14 md:py-20 bg-cream-100">
