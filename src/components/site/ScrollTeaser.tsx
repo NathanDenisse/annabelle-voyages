@@ -24,12 +24,12 @@ export default function ScrollTeaser({ textFr, textEn, target, light = true }: S
       aria-label={text}
       className={`flex flex-col items-center gap-1 transition-opacity duration-300 ${
         light
-          ? "text-brown-400 opacity-30 hover:opacity-60"
-          : "text-white/30 hover:text-white/60"
+          ? "text-brown-700 opacity-60 hover:opacity-90"
+          : "text-white/70 hover:text-white/90"
       }`}
     >
-      <span className="font-sans text-[10px] uppercase tracking-[0.3em] font-light">{text}</span>
-      <ChevronDown size={12} className="animate-bounce-subtle" />
+      <span className="font-sans text-xs uppercase tracking-widest font-light">{text}</span>
+      <ChevronDown size={13} className="animate-bounce-subtle" />
     </button>
   );
 }
