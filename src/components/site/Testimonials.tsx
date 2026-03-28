@@ -131,18 +131,18 @@ export default function Testimonials({ items }: TestimonialsProps) {
           isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
         }`}
       >
-        <p className="font-sans text-xs font-medium text-terracotta-500 tracking-[0.4em] uppercase mb-3">
+        <p className="font-sans text-xs font-light text-terracotta-400 tracking-[0.5em] uppercase mb-5">
           {lang === "fr" ? "Témoignages" : "Testimonials"}
         </p>
-        <h2 className="font-serif italic font-normal text-5xl md:text-6xl text-brown-900 mb-3">
+        <h2 className="font-serif italic font-normal text-4xl md:text-6xl text-brown-900 mb-5">
           {lang === "fr" ? "Ce qu'ils en disent" : "What they say"}
         </h2>
-        <p className="font-sans text-sm text-brown-400 font-light">
+        <p className="font-sans text-brown-400 max-w-xl mx-auto text-sm leading-relaxed">
           {lang === "fr"
-            ? "Retours de partenaires et collaborateurs"
-            : "Feedback from partners and collaborators"}
+            ? "Retours de partenaires et collaborateurs qui ont travaillé avec moi."
+            : "Feedback from partners and collaborators who worked with me."}
         </p>
-        <div className={`w-16 h-px bg-terracotta-400 mx-auto mt-4 transition-all duration-700 delay-300 ${isInView ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`} />
+        <div className={`w-16 h-px bg-terracotta-400 mx-auto mt-5 transition-all duration-700 delay-300 ${isInView ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`} />
       </div>
 
       {/* Desktop: grille 3 colonnes */}
