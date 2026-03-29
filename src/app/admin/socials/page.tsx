@@ -2,8 +2,8 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useCallback } from "react";
-import { Instagram, Youtube } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Instagram, Youtube, AlertCircle } from "lucide-react";
 import { useSocialLinks } from "@/hooks/useFirestore";
 import { updateSocialLinks } from "@/lib/firestore";
 import { useAutosave } from "@/hooks/useAutosave";
@@ -43,7 +43,19 @@ export default function SocialsAdmin() {
     },
     []
   );
-  const saveStatus = useAutosave(form, saveSocials, 800, initialized);
+  const urlErrors = useMemo(() => {
+    const errors: Record<string, string> = {};
+    if (form.instagram && !form.instagram.includes("instagram.com"))
+      errors.instagram = "L'URL doit contenir instagram.com";
+    if (form.youtube && !form.youtube.includes("youtube.com") && !form.youtube.includes("youtu.be"))
+      errors.youtube = "L'URL doit contenir youtube.com";
+    if (form.tiktok && !form.tiktok.includes("tiktok.com"))
+      errors.tiktok = "L'URL doit contenir tiktok.com";
+    return errors;
+  }, [form]);
+
+  const hasErrors = Object.keys(urlErrors).length > 0;
+  const { status: saveStatus } = useAutosave(form, saveSocials, 800, initialized && !hasErrors);
 
   if (loading) {
     return (
@@ -74,9 +86,14 @@ export default function SocialsAdmin() {
             type="url"
             value={form.instagram}
             onChange={(e) => setForm({ ...form, instagram: e.target.value })}
-            className="w-full bg-cream-100 border border-blush-200 rounded-xl px-4 py-3 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors"
+            className={`w-full bg-cream-100 border rounded-xl px-4 py-3 font-sans text-sm text-brown-900 transition-colors ${urlErrors.instagram ? "border-red-300 focus:border-red-400" : "border-blush-200 focus:border-terracotta-400"}`}
             placeholder="https://www.instagram.com/votrecompte"
           />
+          {urlErrors.instagram && (
+            <p className="flex items-center gap-1 font-sans text-xs text-red-500 mt-1">
+              <AlertCircle size={12} /> {urlErrors.instagram}
+            </p>
+          )}
         </div>
 
         {/* YouTube */}
@@ -89,9 +106,14 @@ export default function SocialsAdmin() {
             type="url"
             value={form.youtube}
             onChange={(e) => setForm({ ...form, youtube: e.target.value })}
-            className="w-full bg-cream-100 border border-blush-200 rounded-xl px-4 py-3 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors"
+            className={`w-full bg-cream-100 border rounded-xl px-4 py-3 font-sans text-sm text-brown-900 transition-colors ${urlErrors.youtube ? "border-red-300 focus:border-red-400" : "border-blush-200 focus:border-terracotta-400"}`}
             placeholder="https://www.youtube.com/@votrechaine"
           />
+          {urlErrors.youtube && (
+            <p className="flex items-center gap-1 font-sans text-xs text-red-500 mt-1">
+              <AlertCircle size={12} /> {urlErrors.youtube}
+            </p>
+          )}
         </div>
 
         {/* TikTok */}
@@ -104,12 +126,18 @@ export default function SocialsAdmin() {
             type="url"
             value={form.tiktok}
             onChange={(e) => setForm({ ...form, tiktok: e.target.value })}
-            className="w-full bg-cream-100 border border-blush-200 rounded-xl px-4 py-3 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors"
+            className={`w-full bg-cream-100 border rounded-xl px-4 py-3 font-sans text-sm text-brown-900 transition-colors ${urlErrors.tiktok ? "border-red-300 focus:border-red-400" : "border-blush-200 focus:border-terracotta-400"}`}
             placeholder="https://www.tiktok.com/@votrecompte (optionnel)"
           />
-          <p className="font-sans text-xs text-brown-400 mt-1">
-            Laissez vide si vous n&apos;avez pas encore de compte TikTok.
-          </p>
+          {urlErrors.tiktok ? (
+            <p className="flex items-center gap-1 font-sans text-xs text-red-500 mt-1">
+              <AlertCircle size={12} /> {urlErrors.tiktok}
+            </p>
+          ) : (
+            <p className="font-sans text-xs text-brown-400 mt-1">
+              Laissez vide si vous n&apos;avez pas encore de compte TikTok.
+            </p>
+          )}
         </div>
       </div>
 

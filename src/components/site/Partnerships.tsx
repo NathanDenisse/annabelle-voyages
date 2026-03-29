@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, memo } from "react";
 import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { t } from "@/lib/i18n";
 import { Partnership, SiteContent } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
@@ -17,17 +18,6 @@ interface PartnershipsProps {
   content: SiteContent;
 }
 
-
-function useBreakpoint() {
-  const [isDesktop, setIsDesktop] = useState(false);
-  useEffect(() => {
-    const check = () => setIsDesktop(window.innerWidth >= 1024);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-  return isDesktop;
-}
 
 type CardFormat = "vertical" | "horizontal";
 
@@ -44,7 +34,7 @@ function getPartnershipFormat(item: Partnership): CardFormat {
 
 
 // ─── Card ───
-function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partnership; onClick: () => void; format?: CardFormat }) {
+const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partnership; onClick: () => void; format?: CardFormat }) {
   const { lang } = useLanguage();
   const [mp4Ready, setMp4Ready] = useState(false);
 
@@ -80,7 +70,7 @@ function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partn
 
       {/* MP4 autoplay — preload="auto" loads in background while thumbnail is shown */}
       {isMp4Cover && mp4Src && (
-        <video src={mp4Src} autoPlay muted loop playsInline preload="auto"
+        <video src={mp4Src} autoPlay muted loop playsInline preload="metadata"
           onCanPlay={() => setMp4Ready(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
         />
@@ -92,7 +82,7 @@ function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partn
 
       {mediaCount > 1 && (
         <div className="absolute top-3 right-3 z-10 bg-black/50 backdrop-blur-sm text-white text-xs font-sans px-2.5 py-1 rounded-full">
-          {mediaCount} médias
+          {mediaCount} {lang === "fr" ? "médias" : "media"}
         </div>
       )}
 
@@ -106,7 +96,7 @@ function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partn
       </div>
     </div>
   );
-}
+});
 
 // ─── Main component ───
 export default function Partnerships({ items, content }: PartnershipsProps) {
@@ -118,8 +108,8 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
 
   const autoScrollPlugin = useRef(AutoScroll({
     speed: 0.4,
-    stopOnInteraction: false,
-    stopOnMouseEnter: false,
+    stopOnInteraction: true,
+    stopOnMouseEnter: true,
     startDelay: 0,
   })).current;
 

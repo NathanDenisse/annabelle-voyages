@@ -78,13 +78,7 @@ export default function Footer({ content, socials }: FooterProps) {
             {t(content.footerText, lang)}
           </p>
 
-          {/* Admin link (discreet) */}
-          <Link
-            href="/admin"
-            className="font-sans text-xs text-white/20 hover:text-white/40 transition-colors"
-          >
-            Admin
-          </Link>
+          {/* Admin link — hidden, accessible via /admin URL directly */}
         </div>
       </div>
     </footer>

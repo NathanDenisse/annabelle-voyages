@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { MapPin } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { t, filterLabels } from "@/lib/i18n";
 import { PortfolioItem, Partnership, MediaCategory, SiteContent, CATEGORY_LABELS } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
@@ -63,19 +64,8 @@ function getCardThumbnail(item: PortfolioItem): string {
   return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : "";
 }
 
-function useBreakpoint() {
-  const [isDesktop, setIsDesktop] = useState(false);
-  useEffect(() => {
-    const check = () => setIsDesktop(window.innerWidth >= 1024);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-  return isDesktop;
-}
-
 // ─── Card ───
-function MediaCard({
+const MediaCard = memo(function MediaCard({
   item,
   lang,
   format,
@@ -116,7 +106,7 @@ function MediaCard({
       {isMp4 && mp4CoverSrc && (
         <video
           src={mp4CoverSrc}
-          autoPlay muted loop playsInline preload="auto"
+          autoPlay muted loop playsInline preload="metadata"
           onCanPlay={() => setMp4Ready(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
         />
@@ -151,7 +141,7 @@ function MediaCard({
       </div>
     </div>
   );
-}
+});
 
 // ─── Main component ───
 export default function Portfolio({ items, partnerships = [], content }: PortfolioProps) {
@@ -165,8 +155,8 @@ export default function Portfolio({ items, partnerships = [], content }: Portfol
 
   const autoScrollPlugin = useRef(AutoScroll({
     speed: 0.4,
-    stopOnInteraction: false,
-    stopOnMouseEnter: false,
+    stopOnInteraction: true,
+    stopOnMouseEnter: true,
     startDelay: 0,
   })).current;
 

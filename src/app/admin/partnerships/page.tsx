@@ -183,10 +183,18 @@ export default function PartnershipsAdmin() {
 
       {/* List */}
       {items.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-blush-100">
-          <p className="font-sans text-brown-400 mb-4">Aucun partenariat pour l&apos;instant</p>
-          <button onClick={openAdd} className="text-terracotta-500 font-medium font-sans text-sm hover:underline">
-            + Ajouter le premier
+        <div className="text-center py-20 bg-white rounded-2xl border border-blush-100">
+          <div className="w-16 h-16 bg-blush-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Plus size={28} className="text-terracotta-400" />
+          </div>
+          <p className="font-sans text-brown-500 font-medium mb-1">Aucun partenariat pour l&apos;instant</p>
+          <p className="font-sans text-sm text-brown-400 mb-5">Ajoutez vos collaborations avec des hôtels et marques partenaires.</p>
+          <button
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 bg-terracotta-500 hover:bg-terracotta-600 text-white font-sans font-medium px-5 py-2.5 rounded-xl transition-colors text-sm"
+          >
+            <Plus size={16} />
+            Ajouter un premier partenariat
           </button>
         </div>
       ) : (
@@ -294,16 +302,7 @@ export default function PartnershipsAdmin() {
 
             <div className="p-5 space-y-6">
 
-              {/* ── Section 1: Médias (cover = gallery[0]) ── */}
-              <div className="bg-blush-50 rounded-2xl p-4">
-                <GalleryEditor
-                  items={form.gallery}
-                  onChange={(gallery) => setForm({ ...form, gallery })}
-                  storagePath={`partnerships/${Date.now()}`}
-                />
-              </div>
-
-              {/* ── Section 3: Text info ── */}
+              {/* ── Section 1: Text info (first for easier access) ── */}
               <div className="space-y-4">
                 <p className="font-sans text-xs font-semibold text-brown-400 uppercase tracking-wider">
                   Informations
@@ -364,7 +363,6 @@ export default function PartnershipsAdmin() {
                   onChangeFr={(v) => setForm({ ...form, description: { ...form.description, fr: v } })}
                   onChangeEn={(v) => setForm({ ...form, description: { ...form.description, en: v } })}
                   multiline
-                  context={{ name: form.name, type: "partenariat" }}
                 />
 
                 {/* External link */}
@@ -399,6 +397,12 @@ export default function PartnershipsAdmin() {
                   </span>
                 </div>
               </div>
+
+              {/* ── Section 2: Médias (collapsible) ── */}
+              <MediaSection
+                gallery={form.gallery}
+                onChange={(gallery) => setForm({ ...form, gallery })}
+              />
             </div>
 
             {/* Save */}
@@ -419,6 +423,41 @@ export default function PartnershipsAdmin() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MediaSection({ gallery, onChange }: { gallery: MediaItem[]; onChange: (g: MediaItem[]) => void }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="bg-blush-50 rounded-2xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-4 text-left"
+      >
+        <div>
+          <span className="font-sans text-xs font-semibold text-brown-400 uppercase tracking-wider">
+            Médias
+          </span>
+          <span className="font-sans text-xs text-brown-300 ml-2">
+            ({gallery.length} {gallery.length > 1 ? "fichiers" : "fichier"})
+          </span>
+        </div>
+        <span className={`text-brown-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="p-4 pt-0">
+          <p className="font-sans text-xs text-brown-400 mb-3">Le premier média = couverture. Glissez pour réordonner.</p>
+          <GalleryEditor
+            items={gallery}
+            onChange={onChange}
+            storagePath={`partnerships/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}
+          />
         </div>
       )}
     </div>
