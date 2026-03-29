@@ -54,8 +54,7 @@ export default function SocialsAdmin() {
     return errors;
   }, [form]);
 
-  const hasErrors = Object.keys(urlErrors).length > 0;
-  const { status: saveStatus } = useAutosave(form, saveSocials, 800, initialized && !hasErrors);
+  const { status: saveStatus } = useAutosave(form, saveSocials, 800, initialized);
 
   if (loading) {
     return (
