@@ -288,7 +288,16 @@ export function useTestimonials() {
     const unsubscribe = onTestimonialsChange((data) => {
       if (data.length === 0 && !seededRef.current) {
         seededRef.current = true;
-        Promise.all(seedTestimonials.map((t) => addTestimonial(t))).catch(() => {});
+        // Seed sequentially to avoid duplicate writes from concurrent hook instances
+        (async () => {
+          try {
+            for (const t of seedTestimonials) {
+              await addTestimonial(t);
+            }
+          } catch (err) {
+            console.error("[useTestimonials] Seed failed:", err);
+          }
+        })();
       }
       setItems(data);
       setLoading(false);

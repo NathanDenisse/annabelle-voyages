@@ -59,7 +59,7 @@ export default function NextTripAdmin() {
     });
   }, []);
 
-  const saveStatus = useAutosave(formData, saveFn, 800, initialized);
+  const { status: saveStatus } = useAutosave(formData, saveFn, 800, initialized);
 
   const handleToggleVisible = async () => {
     const next = !visible;

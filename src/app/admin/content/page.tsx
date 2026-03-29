@@ -37,7 +37,7 @@ export default function ContentAdmin() {
     },
     []
   );
-  const saveStatus = useAutosave(form, saveContent, 800, initialized);
+  const { status: saveStatus } = useAutosave(form, saveContent, 800, initialized);
 
   const handleAboutImageUpload = async (file: File) => {
     setUploadingAbout(true);
@@ -148,9 +148,11 @@ export default function ContentAdmin() {
                   </label>
                   <input
                     type="number"
+                    min="0"
+                    max="99999999"
                     value={form.stats[key]}
                     onChange={(e) =>
-                      setForm({ ...form, stats: { ...form.stats, [key]: parseInt(e.target.value) || 0 } })
+                      setForm({ ...form, stats: { ...form.stats, [key]: Math.max(0, parseInt(e.target.value) || 0) } })
                     }
                     className="w-full bg-white border border-blush-200 rounded-lg px-3 py-2 font-sans text-sm text-brown-900 focus:border-terracotta-400 transition-colors"
                   />

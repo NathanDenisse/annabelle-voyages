@@ -23,8 +23,13 @@ try {
   db = getFirestore(app);
   auth = getAuth(app);
   storage = getStorage(app);
-} catch {
-  // Will fail with placeholder values on server — real values needed client-side
+} catch (error) {
+  console.error("[Firebase] Initialization failed:", error);
+  // Re-throw on client — placeholder values only work during SSR/build
+  if (typeof window !== "undefined") {
+    throw error;
+  }
+  // Server-side: initialize with placeholders for build-time compatibility
   app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   db = getFirestore(app);
   auth = getAuth(app);

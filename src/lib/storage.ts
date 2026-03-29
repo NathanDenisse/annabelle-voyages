@@ -9,6 +9,9 @@ import { storage } from "./firebase";
 import { addStorageEntry, deleteStorageEntryByUrl } from "./firestore";
 import imageCompression from "browser-image-compression";
 
+const MAX_IMAGE_SIZE = 50 * 1024 * 1024; // 50 MB
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500 MB
+
 export async function compressImage(
   file: File,
   maxWidthOrHeight: number = 1920,
@@ -28,6 +31,9 @@ export async function uploadImage(
   file: File,
   path: string
 ): Promise<{ url: string; thumbnailUrl: string }> {
+  if (file.size > MAX_IMAGE_SIZE) {
+    throw new Error(`Image trop volumineuse (max ${MAX_IMAGE_SIZE / 1024 / 1024} Mo)`);
+  }
   const compressed = await compressImage(file, 1920, 0.8);
   const thumbnail = await compressImage(file, 400, 0.75);
 
@@ -166,7 +172,7 @@ export async function generateVideoThumbnail(videoFile: File): Promise<Blob | nu
 
     const cleanup = () => URL.revokeObjectURL(objectUrl);
 
-    video.addEventListener("error", () => { cleanup(); resolve(null); });
+    video.addEventListener("error", (e) => { console.warn("[generateVideoThumbnail] Video load error:", e); cleanup(); resolve(null); });
 
     video.addEventListener("loadedmetadata", () => {
       video.currentTime = Math.min(1, video.duration * 0.1);
@@ -181,7 +187,7 @@ export async function generateVideoThumbnail(videoFile: File): Promise<Blob | nu
         if (!ctx) { cleanup(); resolve(null); return; }
         ctx.drawImage(video, 0, 0);
         canvas.toBlob((blob) => { cleanup(); resolve(blob); }, "image/jpeg", 0.85);
-      } catch { cleanup(); resolve(null); }
+      } catch (err) { console.warn("[generateVideoThumbnail] Canvas error:", err); cleanup(); resolve(null); }
     }, { once: true });
 
     video.load();
@@ -203,6 +209,9 @@ export async function uploadVideo(
   path: string,
   onProgress?: (percent: number) => void
 ): Promise<string> {
+  if (file.size > MAX_VIDEO_SIZE) {
+    throw new Error(`Vidéo trop volumineuse (max ${MAX_VIDEO_SIZE / 1024 / 1024} Mo)`);
+  }
   const storageRef = ref(storage, path);
   const fileSize = file.size;
   const uploadTask = uploadBytesResumable(storageRef, file);

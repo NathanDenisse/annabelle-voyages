@@ -49,8 +49,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ suggestions: [] });
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
-    return NextResponse.json({ suggestions: parsed.suggestions || [] });
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return NextResponse.json({ suggestions: parsed.suggestions || [] });
+    } catch {
+      return NextResponse.json({ suggestions: [] });
+    }
   } catch {
     return NextResponse.json({ suggestions: [] });
   }

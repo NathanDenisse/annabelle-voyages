@@ -38,7 +38,7 @@ export default function HeroAdmin() {
     },
     []
   );
-  const saveStatus = useAutosave(taglineData, saveTagline, 800, initialized);
+  const { status: saveStatus } = useAutosave(taglineData, saveTagline, 800, initialized);
 
   const handleVideoUpload = async (file: File) => {
     if (!file.type.startsWith("video/")) {

@@ -48,7 +48,7 @@ export type MediaCategory = "hotel" | "paysage" | "lifestyle" | "drone" | "activ
 export interface MediaItem {
   type: "image" | "video";
   url: string;
-  platform?: "youtube" | "mp4";
+  platform?: "youtube" | "youtube-short" | "mp4" | "instagram" | "tiktok";
   /** Auto-generated JPEG thumbnail for MP4 videos */
   thumbnailUrl?: string;
   /** Orientation detected at upload time or set by migration */

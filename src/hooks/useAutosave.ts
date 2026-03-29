@@ -14,10 +14,20 @@ export function useAutosave<T>(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFirstRender = useRef(true);
   const latestData = useRef(data);
+  const savingRef = useRef(false);
 
   latestData.current = data;
 
+  const cancel = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
   const save = useCallback(async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setStatus("saving");
     try {
       await saveFn(latestData.current);
@@ -26,8 +36,18 @@ export function useAutosave<T>(
     } catch {
       setStatus("error");
       setTimeout(() => setStatus("idle"), 3000);
+    } finally {
+      savingRef.current = false;
     }
   }, [saveFn]);
+
+  /** Immediately save pending data (call before closing a modal, etc.) */
+  const flush = useCallback(async () => {
+    cancel();
+    if (!savingRef.current) {
+      await save();
+    }
+  }, [cancel, save]);
 
   useEffect(() => {
     // Skip first render (initial data load)
@@ -39,7 +59,7 @@ export function useAutosave<T>(
     if (!enabled) return;
 
     // Clear previous timeout
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    cancel();
 
     // Show pending state immediately
     setStatus("saving");
@@ -50,9 +70,9 @@ export function useAutosave<T>(
     }, delay);
 
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      cancel();
     };
-  }, [data, delay, enabled, save]);
+  }, [data, delay, enabled, save, cancel]);
 
-  return status;
+  return { status, flush };
 }
