@@ -154,8 +154,8 @@ export default function Portfolio({ items, partnerships = [], content }: Portfol
   const isInView = useInView(headerRef, { once: true, margin: "-80px" });
 
   const autoScrollPlugin = useRef(AutoScroll({
-    speed: 0.4,
-    stopOnInteraction: true,
+    speed: 0.8,
+    stopOnInteraction: false,
     stopOnMouseEnter: true,
     startDelay: 0,
   })).current;

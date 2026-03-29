@@ -107,8 +107,8 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
   const [selectedPartnership, setSelectedPartnership] = useState<Partnership | null>(null);
 
   const autoScrollPlugin = useRef(AutoScroll({
-    speed: 0.4,
-    stopOnInteraction: true,
+    speed: 0.8,
+    stopOnInteraction: false,
     stopOnMouseEnter: true,
     startDelay: 0,
   })).current;
