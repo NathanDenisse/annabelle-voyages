@@ -48,7 +48,11 @@ No test suite is configured.
 
 **Stack:** Next.js 14 (App Router) · TypeScript · Firebase (Firestore + Auth + Storage) · Tailwind CSS · Framer Motion · Embla Carousel · dnd-kit
 
+**Node:** 22.x (see `.node-version`)
+
 **Key path alias:** `@/*` → `./src/*`
+
+**Rendering:** The homepage (`page.tsx`) uses `export const dynamic = "force-dynamic"` and is fully client-side (`"use client"`). All data comes from Firestore real-time listeners, not SSR.
 
 ### Data Layer (Firebase, no ORM)
 
@@ -71,7 +75,7 @@ All Firestore operations go through `src/lib/firestore.ts`. Custom hooks in `src
 
 **`MediaItem` type:**
 ```typescript
-{ type: "image" | "video", url: string, platform?: "youtube" | "mp4",
+{ type: "image" | "video", url: string, platform?: "youtube" | "youtube-short" | "mp4" | "instagram" | "tiktok",
   thumbnailUrl?: string, format?: "vertical" | "horizontal" }
 ```
 
@@ -118,4 +122,10 @@ FIREBASE_ADMIN_PROJECT_ID  # Only needed for seed script
 - Public create only: `messages` (contact form)
 - Authenticated write: everything else (admin operations)
 
-After editing rules, deploy with `firebase deploy --only firestore:rules`.
+After editing rules, deploy with `firebase deploy --only firestore:rules,storage`.
+
+## Design System
+
+**Fonts:** `font-serif` = Cormorant Garamond (headings), `font-sans` = DM Sans (body), `font-script` = Great Vibes (decorative)
+
+**Color palette (Tailwind):** `cream-*` (backgrounds), `blush-*` (soft accents), `brown-*` (text), `terracotta-*` (primary accent), `gold-*` (secondary accent), `sunset-*` (orange/pink gradients). CSS variables also defined in `globals.css` (`--cream`, `--blush`, `--brown`, `--terracotta`, `--gold`, `--sunset-orange`, `--sunset-pink`).

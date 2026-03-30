@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useState, useRef, lazy, Suspense } from "react";
 import Image from "next/image";
 import { Plus, Trash2, Eye, EyeOff, X, Save } from "lucide-react";
 import {
@@ -30,7 +30,7 @@ import {
 import { PortfolioItem, MediaCategory, MediaItem, CATEGORY_LABELS } from "@/types";
 import { getYouTubeId } from "@/lib/storage";
 import SmartBilingualField from "@/components/admin/SmartBilingualField";
-import GalleryEditor from "@/components/admin/GalleryEditor";
+const GalleryEditor = lazy(() => import("@/components/admin/GalleryEditor"));
 import SortableItem from "@/components/admin/SortableItem";
 import toast from "react-hot-toast";
 
@@ -399,6 +399,7 @@ export default function PortfolioAdmin() {
 
 function PortfolioMediaSection({ gallery, onChange }: { gallery: MediaItem[]; onChange: (g: MediaItem[]) => void }) {
   const [open, setOpen] = useState(true);
+  const storagePathRef = useRef(`portfolio/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
   return (
     <div className="bg-blush-50 rounded-2xl overflow-hidden">
       <button
@@ -421,11 +422,13 @@ function PortfolioMediaSection({ gallery, onChange }: { gallery: MediaItem[]; on
       {open && (
         <div className="p-4 pt-0">
           <p className="font-sans text-xs text-brown-400 mb-3">Le premier média = couverture. Glissez pour réordonner.</p>
-          <GalleryEditor
-            items={gallery}
-            onChange={onChange}
-            storagePath={`portfolio/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}
-          />
+          <Suspense fallback={<div className="h-24 flex items-center justify-center"><div className="w-5 h-5 border-2 border-terracotta-200 border-t-terracotta-500 rounded-full animate-spin" /></div>}>
+            <GalleryEditor
+              items={gallery}
+              onChange={onChange}
+              storagePath={storagePathRef.current}
+            />
+          </Suspense>
         </div>
       )}
     </div>

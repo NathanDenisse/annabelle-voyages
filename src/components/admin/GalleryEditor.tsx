@@ -76,8 +76,9 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
           `${newItems.length} photo${newItems.length > 1 ? "s" : ""} ajoutée${newItems.length > 1 ? "s" : ""}`
         );
       }
-    } catch {
-      toast.error("Erreur upload photo.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erreur upload photo.";
+      toast.error(msg);
     } finally {
       setUploading(false);
     }
@@ -106,8 +107,9 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
 
       onChange([...items, { type: "video", url, platform: "mp4", thumbnailUrl, format: "vertical" }]);
       toast.success("Vidéo MP4 ajoutée !");
-    } catch {
-      toast.error("Erreur upload MP4.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erreur upload MP4.";
+      toast.error(msg);
     } finally {
       setUploadingMp4(false);
       setMp4Progress(0);
