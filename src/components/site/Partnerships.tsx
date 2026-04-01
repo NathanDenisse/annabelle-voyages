@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, memo } from "react";
-import { useInView, AnimatePresence } from "framer-motion";
+import { useInView } from "framer-motion";
 import Image from "next/image";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
@@ -215,16 +215,14 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
         </div>
       </section>
 
-      <AnimatePresence>
-        {selectedPartnership && (
-          <ItemModal
-            gallery={selectedGallery}
-            title={selectedPartnership.name}
-            description={t(selectedPartnership.description, lang)}
-            onClose={() => setSelectedPartnership(null)}
-          />
-        )}
-      </AnimatePresence>
+      {selectedPartnership && (
+        <ItemModal
+          gallery={selectedGallery}
+          title={selectedPartnership.name}
+          description={t(selectedPartnership.description, lang)}
+          onClose={() => setSelectedPartnership(null)}
+        />
+      )}
     </>
   );
 }

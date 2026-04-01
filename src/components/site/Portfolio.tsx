@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, memo } from "react";
-import { useInView, AnimatePresence } from "framer-motion";
+import { useInView } from "framer-motion";
 import Image from "next/image";
 import { MapPin } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
@@ -253,18 +253,16 @@ export default function Portfolio({ items, content }: PortfolioProps) {
         <ScrollTeaser textFr="Ils m'ont fait confiance ↓" textEn="They trusted me ↓" target="#partnerships" light />
       </div>
 
-      <AnimatePresence>
-        {selectedItem && (
-          <ItemModal
-            gallery={selectedGallery}
-            title={t(selectedItem.title, lang)}
-            description={selectedItem.description ? t(selectedItem.description, lang) : undefined}
-            location={selectedItem.location}
-            categoryLabel={t(CATEGORY_LABELS[selectedItem.category], lang)}
-            onClose={() => setSelectedItem(null)}
-          />
-        )}
-      </AnimatePresence>
+      {selectedItem && (
+        <ItemModal
+          gallery={selectedGallery}
+          title={t(selectedItem.title, lang)}
+          description={selectedItem.description ? t(selectedItem.description, lang) : undefined}
+          location={selectedItem.location}
+          categoryLabel={t(CATEGORY_LABELS[selectedItem.category], lang)}
+          onClose={() => setSelectedItem(null)}
+        />
+      )}
     </section>
   );
 }
