@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, memo } from "react";
+import { useRef, useState, useEffect, memo, type RefObject } from "react";
 import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import useEmblaCarousel from "embla-carousel-react";
@@ -11,7 +11,8 @@ import { t } from "@/lib/i18n";
 import { Partnership, SiteContent } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
 import { detectVideoSource, getYouTubeId } from "@/lib/storage";
-import ItemModal from "./ItemModal";
+import dynamic from "next/dynamic";
+const ItemModal = dynamic(() => import("./ItemModal"), { ssr: false });
 
 interface PartnershipsProps {
   items: Partnership[];
@@ -37,6 +38,8 @@ function getPartnershipFormat(item: Partnership): CardFormat {
 const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partnership; onClick: () => void; format?: CardFormat }) {
   const { lang } = useLanguage();
   const [mp4Ready, setMp4Ready] = useState(false);
+  const cardRef = useRef(null);
+  const isVisible = useInView(cardRef as RefObject<Element>, { once: true, margin: "100px" });
 
   const firstMedia = item.gallery[0] ?? null;
   const isMp4Cover = firstMedia?.platform === "mp4";
@@ -55,6 +58,7 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
 
   return (
     <div
+      ref={cardRef}
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden border border-white/10 hover:border-terracotta-500/40 cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
@@ -68,8 +72,8 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
         <div className="absolute inset-0 bg-gradient-to-br from-[#4A3230] to-[#2A1815]" />
       )}
 
-      {/* MP4 autoplay — preload="auto" loads in background while thumbnail is shown */}
-      {isMp4Cover && mp4Src && (
+      {/* MP4 autoplay — only loads when card is visible in viewport */}
+      {isMp4Cover && mp4Src && isVisible && (
         <video src={mp4Src} autoPlay muted loop playsInline preload="metadata"
           onCanPlay={() => setMp4Ready(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}

@@ -18,17 +18,19 @@ export default function NextTrip({ data }: NextTripProps) {
   const isInView = useInView(contentRef, { once: true, margin: "-60px" });
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoReady, setVideoReady] = useState(false);
+  const videoTriggerRef = useRef(null);
+  const shouldLoadVideo = useInView(videoTriggerRef, { once: true, margin: "200px" });
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !data.backgroundVideoUrl) return;
+    if (!video || !data.backgroundVideoUrl || !shouldLoadVideo) return;
     const tryPlay = () => { video.muted = true; video.play().catch(() => {}); };
     tryPlay();
     const t1 = setTimeout(tryPlay, 500);
     const onVisibility = () => { if (document.visibilityState === "visible") tryPlay(); };
     document.addEventListener("visibilitychange", onVisibility);
     return () => { clearTimeout(t1); document.removeEventListener("visibilitychange", onVisibility); };
-  }, [data.backgroundVideoUrl]);
+  }, [data.backgroundVideoUrl, shouldLoadVideo]);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -52,15 +54,16 @@ export default function NextTrip({ data }: NextTripProps) {
       className="relative w-full min-h-[60vh] md:min-h-[70vh] flex items-center justify-center overflow-hidden"
       style={{ backgroundColor: "#0E7C7B" }}
     >
-      {/* Background video */}
+      {/* Background video — only loads when section approaches viewport */}
+      <div ref={videoTriggerRef} className="absolute inset-0" />
       <video
         ref={videoRef}
-        src={data.backgroundVideoUrl || undefined}
+        src={shouldLoadVideo ? (data.backgroundVideoUrl || undefined) : undefined}
         autoPlay
         muted
         loop
         playsInline
-        preload="auto"
+        preload="none"
         {...{ "webkit-playsinline": "true" }}
         onCanPlay={() => setVideoReady(true)}
         onPlaying={() => setVideoReady(true)}

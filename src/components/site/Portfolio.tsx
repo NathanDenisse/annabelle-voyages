@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, memo } from "react";
+import { useState, useRef, useEffect, memo, type RefObject } from "react";
 import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { MapPin } from "lucide-react";
@@ -15,7 +15,8 @@ import {
   detectVideoSource,
   getYouTubeId,
 } from "@/lib/storage";
-import ItemModal from "./ItemModal";
+import dynamic from "next/dynamic";
+const ItemModal = dynamic(() => import("./ItemModal"), { ssr: false });
 
 interface PortfolioProps {
   items: PortfolioItem[];
@@ -62,6 +63,8 @@ const MediaCard = memo(function MediaCard({
   onClick: () => void;
 }) {
   const [mp4Ready, setMp4Ready] = useState(false);
+  const cardRef = useRef(null);
+  const isVisible = useInView(cardRef as RefObject<Element>, { once: true, margin: "100px" });
 
   const firstMedia = item.gallery[0] ?? null;
   const mp4CoverSrc = firstMedia?.platform === "mp4" ? firstMedia.url : null;
@@ -73,6 +76,7 @@ const MediaCard = memo(function MediaCard({
 
   return (
     <div
+      ref={cardRef}
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
@@ -87,8 +91,8 @@ const MediaCard = memo(function MediaCard({
         />
       )}
 
-      {/* MP4 autoplay — preload="auto" loads in background while thumbnail is shown */}
-      {isMp4 && mp4CoverSrc && (
+      {/* MP4 autoplay — only loads when card is visible in viewport */}
+      {isMp4 && mp4CoverSrc && isVisible && (
         <video
           src={mp4CoverSrc}
           autoPlay muted loop playsInline preload="metadata"
