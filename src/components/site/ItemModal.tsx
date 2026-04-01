@@ -484,28 +484,30 @@ function ScrollItem({ item, isActive }: { item: MediaItem; isActive: boolean }) 
   if (!videoId) return null;
   const isShort = detectVideoSource(item.url) === "youtube-short";
   return (
-    <YouTubeFacade videoId={videoId} isShort={isShort} isActive={isActive} />
+    <YouTubeFacade videoId={videoId} isShort={isShort} />
   );
 }
 
 // ─── YouTube Facade (thumbnail → iframe on click) ────────────────────────────
 
-function YouTubeFacade({ videoId, isShort, isActive }: { videoId: string; isShort: boolean; isActive: boolean }) {
+function YouTubeFacade({ videoId, isShort }: { videoId: string; isShort: boolean }) {
   const [playing, setPlaying] = useState(false);
 
   return (
     <div
-      className={`relative rounded-xl overflow-hidden w-full ${
-        isShort ? "max-w-xs aspect-[9/16]" : "aspect-video"
+      className={`relative rounded-xl overflow-hidden ${
+        isShort ? "max-w-xs w-full" : "w-full max-w-3xl"
       }`}
+      style={{ aspectRatio: isShort ? "9/16" : "16/9" }}
     >
       {playing ? (
         <iframe
           src={`https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&rel=0&modestbranding=1&playsinline=1`}
-          allow="autoplay; encrypted-media; fullscreen"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
-          loading="lazy"
-          className="absolute inset-0 w-full h-full border-none"
+          width="100%"
+          height="100%"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
         />
       ) : (
         <button
@@ -513,17 +515,13 @@ function YouTubeFacade({ videoId, isShort, isActive }: { videoId: string; isShor
           className="absolute inset-0 w-full h-full group cursor-pointer"
           aria-label="Play video"
         >
-          {/* Thumbnail */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
             alt="Video thumbnail"
             className="w-full h-full object-cover"
-            loading="lazy"
           />
-          {/* Dark overlay */}
           <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors" />
-          {/* Play button */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-16 h-16 rounded-full bg-white/90 group-hover:bg-white group-hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-lg">
               <div className="w-0 h-0 border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent border-l-[16px] border-l-brown-900 ml-1" />
