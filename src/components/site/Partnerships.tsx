@@ -72,6 +72,7 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
     if (!video) return;
     if (isOnScreen) {
       video.load();
+      video.play().catch(() => {});
     } else {
       video.pause();
       setMp4Ready(false);
@@ -103,8 +104,8 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
           ref={videoRef}
           src={mp4Src}
           muted loop playsInline preload="none"
-          onCanPlay={() => { setMp4Ready(true); videoRef.current?.play().catch(() => {}); }}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
+          onCanPlay={() => setMp4Ready(true)}
+          className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
         />
       )}
 
