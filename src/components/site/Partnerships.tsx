@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, memo } from "react";
-import { useInView, AnimatePresence } from "framer-motion";
+import { useInView } from "framer-motion";
 import Image from "next/image";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
@@ -11,13 +11,13 @@ import { t } from "@/lib/i18n";
 import { Partnership, SiteContent } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
 import { detectVideoSource, getYouTubeId } from "@/lib/storage";
-import ItemModal from "./ItemModal";
+import dynamic from "next/dynamic";
+const ItemModal = dynamic(() => import("./ItemModal"), { ssr: false });
 
 interface PartnershipsProps {
   items: Partnership[];
   content: SiteContent;
 }
-
 
 type CardFormat = "vertical" | "horizontal";
 
@@ -32,15 +32,12 @@ function getPartnershipFormat(item: Partnership): CardFormat {
   return "horizontal";
 }
 
-
-// ─── Card ───
+// ─── Card — static thumbnail only ───
 const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partnership; onClick: () => void; format?: CardFormat }) {
   const { lang } = useLanguage();
-  const [mp4Ready, setMp4Ready] = useState(false);
 
   const firstMedia = item.gallery[0] ?? null;
-  const isMp4Cover = firstMedia?.platform === "mp4";
-  const mp4Src = firstMedia?.platform === "mp4" ? firstMedia.url : undefined;
+  const isVideo = firstMedia?.type === "video";
 
   const coverImage = (() => {
     if (!firstMedia) return item.logoUrl || null;
@@ -58,27 +55,30 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden border border-white/10 hover:border-terracotta-500/40 cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
-      {/* Static cover — thumbnail or image; fades out only when MP4 is ready */}
       {coverImage ? (
         <Image src={coverImage} alt={item.name} fill
-          className={`object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
+        />
+      ) : isVideo && firstMedia ? (
+        <video
+          src={firstMedia.url}
+          className="absolute inset-0 w-full h-full object-cover"
+          muted playsInline preload="metadata"
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#4A3230] to-[#2A1815]" />
       )}
 
-      {/* MP4 autoplay — preload="auto" loads in background while thumbnail is shown */}
-      {isMp4Cover && mp4Src && (
-        <video src={mp4Src} autoPlay muted loop playsInline preload="metadata"
-          onCanPlay={() => setMp4Ready(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
-        />
-      )}
-
-      {/* YouTube: static thumbnail only in card — iframe loads in popup on click */}
-
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
+
+      {isVideo && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+          <div className="w-12 h-12 rounded-full bg-white/80 group-hover:bg-white group-hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-lg">
+            <div className="w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-l-[13px] border-l-brown-900 ml-0.5" />
+          </div>
+        </div>
+      )}
 
       {mediaCount > 1 && (
         <div className="absolute top-3 right-3 z-10 bg-black/50 backdrop-blur-sm text-white text-xs font-sans px-2.5 py-1 rounded-full">
@@ -98,7 +98,7 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
   );
 });
 
-// ─── Main component ───
+// ─── Main ───
 export default function Partnerships({ items, content }: PartnershipsProps) {
   const { lang } = useLanguage();
   const isDesktop = useBreakpoint();
@@ -107,10 +107,7 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
   const [selectedPartnership, setSelectedPartnership] = useState<Partnership | null>(null);
 
   const autoScrollPlugin = useRef(AutoScroll({
-    speed: 0.8,
-    stopOnInteraction: false,
-    stopOnMouseEnter: true,
-    startDelay: 0,
+    speed: 0.8, stopOnInteraction: false, stopOnMouseEnter: true, startDelay: 0,
   })).current;
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
@@ -146,21 +143,14 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
         </div>
 
         {isDesktop ? (
-          /* ─── Desktop: grille uniforme 3 colonnes ─── */
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-3 gap-4">
               {visible.map((item) => (
-                <PartnershipCard
-                  key={item.id}
-                  item={item}
-                  format="horizontal"
-                  onClick={() => setSelectedPartnership(item)}
-                />
+                <PartnershipCard key={item.id} item={item} format="horizontal" onClick={() => setSelectedPartnership(item)} />
               ))}
             </div>
           </div>
         ) : (
-          /* ─── Mobile: Embla auto-scroll + drag ─── */
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
               {visible.map((item) => {
@@ -175,22 +165,19 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
           </div>
         )}
 
-        {/* Teaser */}
         <div className="relative z-10 flex justify-center pt-10 pb-6">
           <ScrollTeaser textFr="Ce qu'ils en disent ↓" textEn="What they say ↓" target="#testimonials" light={false} />
         </div>
       </section>
 
-      <AnimatePresence>
-        {selectedPartnership && (
-          <ItemModal
-            gallery={selectedGallery}
-            title={selectedPartnership.name}
-            description={t(selectedPartnership.description, lang)}
-            onClose={() => setSelectedPartnership(null)}
-          />
-        )}
-      </AnimatePresence>
+      {selectedPartnership && (
+        <ItemModal
+          gallery={selectedGallery}
+          title={selectedPartnership.name}
+          description={t(selectedPartnership.description, lang)}
+          onClose={() => setSelectedPartnership(null)}
+        />
+      )}
     </>
   );
 }
