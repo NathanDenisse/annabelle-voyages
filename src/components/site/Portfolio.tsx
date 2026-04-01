@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, memo } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { useInView } from "framer-motion";
 import Image from "next/image";
-import { MapPin } from "lucide-react";
+import { MapPin, Play } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -14,6 +14,7 @@ import ScrollTeaser from "./ScrollTeaser";
 import {
   detectVideoSource,
   getYouTubeId,
+  getVideoEmbedUrl,
 } from "@/lib/storage";
 import dynamic from "next/dynamic";
 const ItemModal = dynamic(() => import("./ItemModal"), { ssr: false });
@@ -30,9 +31,7 @@ type CardFormat = "vertical" | "horizontal";
 function getCardFormat(item: PortfolioItem): CardFormat {
   const first = item.gallery[0];
   if (!first) return "horizontal";
-  // Use stored format if set (upload or migration)
   if (first.format) return first.format;
-  // Fallback detection from platform / URL
   if (first.platform === "mp4") return "vertical";
   if (first.platform === "youtube") {
     return detectVideoSource(first.url) === "youtube-short" ? "vertical" : "horizontal";
@@ -40,7 +39,7 @@ function getCardFormat(item: PortfolioItem): CardFormat {
   return "horizontal";
 }
 
-/** Card cover thumbnail — gallery[0] is the only source */
+/** Card cover thumbnail — always a static image, never a video */
 function getCardThumbnail(item: PortfolioItem): string {
   const first = item.gallery[0];
   if (!first) return "/images/placeholders/portfolio.svg";
@@ -50,7 +49,12 @@ function getCardThumbnail(item: PortfolioItem): string {
   return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : "";
 }
 
-// ─── Card ───
+function isVideoItem(item: PortfolioItem): boolean {
+  const first = item.gallery[0];
+  return first?.type === "video";
+}
+
+// ─── Card — always static thumbnail, play icon for videos ───
 const MediaCard = memo(function MediaCard({
   item,
   lang,
@@ -62,73 +66,37 @@ const MediaCard = memo(function MediaCard({
   format: CardFormat;
   onClick: () => void;
 }) {
-  const [mp4Ready, setMp4Ready] = useState(false);
-  const [isOnScreen, setIsOnScreen] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const firstMedia = item.gallery[0] ?? null;
-  const mp4CoverSrc = firstMedia?.platform === "mp4" ? firstMedia.url : null;
-  const isMp4 = !!mp4CoverSrc;
   const thumbnail = getCardThumbnail(item);
-
-  // Detect when card enters/leaves viewport
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el || !isMp4) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsOnScreen(entry.isIntersecting),
-      { rootMargin: "50px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [isMp4]);
-
-  // Load & play when on screen, pause when off
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (isOnScreen) {
-      video.load();
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-      setMp4Ready(false);
-    }
-  }, [isOnScreen]);
-
+  const isVideo = isVideoItem(item);
   const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
   const mediaCount = item.gallery.length;
 
   return (
     <div
-      ref={cardRef}
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
-      {/* Static thumbnail — visible until video is ready */}
+      {/* Static thumbnail — NO autoplay video */}
       {thumbnail && (
         <Image
           src={thumbnail}
           alt={t(item.title, lang)}
           fill
-          className={`object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
       )}
 
-      {/* MP4 video — always mounted, loaded on demand when visible */}
-      {isMp4 && mp4CoverSrc && (
-        <video
-          ref={videoRef}
-          src={mp4CoverSrc}
-          muted loop playsInline preload="none"
-          onCanPlay={() => setMp4Ready(true)}
-          className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
-        />
-      )}
-
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent pointer-events-none" />
+
+      {/* Play icon for videos */}
+      {isVideo && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+          <div className="w-14 h-14 rounded-full bg-white/90 group-hover:bg-white group-hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-lg">
+            <Play size={22} className="text-brown-900 ml-1" fill="currentColor" />
+          </div>
+        </div>
+      )}
 
       {/* Category tag */}
       <div className="absolute top-3 left-3 z-10">
@@ -187,6 +155,20 @@ export default function Portfolio({ items, content }: PortfolioProps) {
     if (emblaApi) emblaApi.reInit();
   }, [activeCategory, emblaApi, isDesktop]);
 
+  const handleCardClick = (item: PortfolioItem) => {
+    const first = item.gallery[0];
+    if (item.gallery.length === 1 && first?.type === "video") {
+      if (first.platform === "mp4") {
+        setSelectedItem(item);
+      } else {
+        const embedUrl = getVideoEmbedUrl(first.url);
+        window.open(embedUrl || first.url, "_blank", "noopener");
+      }
+      return;
+    }
+    setSelectedItem(item);
+  };
+
   const selectedGallery = selectedItem?.gallery ?? [];
 
   return (
@@ -210,29 +192,21 @@ export default function Portfolio({ items, content }: PortfolioProps) {
 
       {filtered.length > 0 ? (
         isDesktop ? (
-          /* ─── Desktop: grille uniforme 3 colonnes ─── */
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-3 gap-4">
               {filtered.map((item) => (
-                <MediaCard
-                  key={item.id}
-                  item={item}
-                  lang={lang}
-                  format="horizontal"
-                  onClick={() => setSelectedItem(item)}
-                />
+                <MediaCard key={item.id} item={item} lang={lang} format="horizontal" onClick={() => handleCardClick(item)} />
               ))}
             </div>
           </div>
         ) : (
-          /* ─── Mobile: Embla auto-scroll + drag ─── */
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
               {filtered.map((item) => {
                 const format = getCardFormat(item);
                 return (
                   <div key={item.id} className={`flex-none px-1.5 ${format === "vertical" ? "w-[55%]" : "w-[80%]"}`}>
-                    <MediaCard item={item} lang={lang} format={format} onClick={() => setSelectedItem(item)} />
+                    <MediaCard item={item} lang={lang} format={format} onClick={() => handleCardClick(item)} />
                   </div>
                 );
               })}
@@ -245,7 +219,6 @@ export default function Portfolio({ items, content }: PortfolioProps) {
         </p>
       )}
 
-      {/* Teaser */}
       <div className="relative z-10 flex justify-center pt-10 pb-6">
         <ScrollTeaser textFr="Ils m'ont fait confiance ↓" textEn="They trusted me ↓" target="#partnerships" light />
       </div>

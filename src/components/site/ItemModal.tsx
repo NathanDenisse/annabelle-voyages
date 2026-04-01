@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, GalleryHorizontal, LayoutGrid, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, GalleryHorizontal, LayoutGrid, Play, X } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import { MediaItem } from "@/types";
 import { detectVideoSource, getYouTubeId } from "@/lib/storage";
@@ -430,81 +429,59 @@ function ScrollItem({ item, isActive }: { item: MediaItem; isActive: boolean }) 
     );
   }
 
-  // YouTube — facade: show thumbnail until user clicks play
-  const videoId = getYouTubeId(item.url);
-  if (!videoId) return null;
-  const isShort = detectVideoSource(item.url) === "youtube-short";
+  // YouTube/Shorts/Reels/TikTok — open in new tab (avoids all iOS iframe bugs)
   return (
-    <YouTubeFacade videoId={videoId} isShort={isShort} />
+    <YouTubeOpenExternal item={item} />
   );
 }
 
-// ─── YouTube Facade (thumbnail → portal iframe on click) ─────────────────────
-// iOS Safari bug: CSS transforms on ANY ancestor make iframes invisible.
-// Embla carousel applies transform: translate3d() to position slides.
-// Solution: render the iframe in a React Portal on document.body,
-// completely outside the Embla/modal DOM hierarchy — zero transforms.
+// ─── YouTube: thumbnail + open in new tab on click ───────────────────────────
+// No iframe at all — eliminates iOS Safari transform/iframe bugs completely.
 
-function YouTubeFacade({ videoId, isShort }: { videoId: string; isShort: boolean }) {
-  const [playing, setPlaying] = useState(false);
+function YouTubeOpenExternal({ item }: { item: MediaItem }) {
+  const videoId = getYouTubeId(item.url);
+  const isShort = detectVideoSource(item.url) === "youtube-short";
+  const thumbnail = videoId
+    ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+    : null;
   const paddingBottom = isShort ? "177.78%" : "56.25%";
 
+  const handleOpen = () => {
+    window.open(item.url, "_blank", "noopener");
+  };
+
   return (
-    <>
-      <div
-        className={`relative rounded-xl ${isShort ? "max-w-xs w-full" : "w-full max-w-3xl"}`}
-        style={{ paddingBottom, height: 0, overflow: "visible" }}
+    <div
+      className={`relative rounded-xl ${isShort ? "max-w-xs w-full" : "w-full max-w-3xl"}`}
+      style={{ paddingBottom, height: 0, overflow: "visible" }}
+    >
+      <button
+        onClick={handleOpen}
+        className="absolute top-0 left-0 w-full h-full group cursor-pointer rounded-xl overflow-hidden"
+        aria-label="Open video"
       >
-        <button
-          onClick={() => setPlaying(true)}
-          className="absolute top-0 left-0 w-full h-full group cursor-pointer rounded-xl overflow-hidden"
-          aria-label="Play video"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+        {thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+            src={thumbnail}
             alt="Video thumbnail"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-16 h-16 rounded-full bg-white/90 group-hover:bg-white group-hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-lg">
-              <div className="w-0 h-0 border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent border-l-[16px] border-l-brown-900 ml-1" />
-            </div>
+        ) : (
+          <div className="w-full h-full bg-white/5" />
+        )}
+        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <div className="w-16 h-16 rounded-full bg-white/90 group-hover:bg-white group-hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-lg">
+            <Play size={22} className="text-brown-900 ml-1" fill="currentColor" />
           </div>
-        </button>
-      </div>
-
-      {/* Portal: iframe rendered on document.body — outside ALL transforms */}
-      {playing && createPortal(
-        <div
-          className="fixed inset-0 z-[100] bg-black flex items-center justify-center"
-          onClick={() => setPlaying(false)}
-        >
-          <button
-            onClick={() => setPlaying(false)}
-            className="absolute top-4 right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-            aria-label="Close video"
-          >
-            <X size={24} />
-          </button>
-          <div
-            className={`relative ${isShort ? "h-[85vh] max-h-[85vh]" : "w-[95vw] max-w-4xl"}`}
-            style={isShort ? { aspectRatio: "9/16" } : { paddingBottom: "56.25%", height: 0 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <iframe
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&rel=0&modestbranding=1&playsinline=1`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="absolute top-0 left-0 w-full h-full border-none"
-              style={{ minHeight: 200 }}
-            />
-          </div>
-        </div>,
-        document.body
-      )}
-    </>
+          <span className="flex items-center gap-1.5 font-sans text-xs text-white/80 bg-black/40 px-3 py-1.5 rounded-full">
+            <ExternalLink size={12} />
+            YouTube
+          </span>
+        </div>
+      </button>
+    </div>
   );
 }
 
