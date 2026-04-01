@@ -36,12 +36,16 @@ function getKey(item: MediaItem, idx: number) {
 
 export default function GalleryEditor({ items, onChange, storagePath }: GalleryEditorProps) {
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
   const [uploadingMp4, setUploadingMp4] = useState(false);
   const [mp4Progress, setMp4Progress] = useState(0);
   const [showYouTubeInput, setShowYouTubeInput] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const photoRef = useRef<HTMLInputElement>(null);
   const mp4Ref = useRef<HTMLInputElement>(null);
+  // Keep a ref to the latest items to avoid stale closure during async uploads
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -56,31 +60,36 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
     onChange(arrayMove(items, Number(active.id), Number(over.id)));
   };
 
-  const handlePhotosUpload = async (files: FileList) => {
+  const handlePhotosUpload = async (fileArray: File[]) => {
+    const imageFiles = fileArray.filter((f) => f.type.startsWith("image/"));
+    if (imageFiles.length === 0) return;
     setUploading(true);
+    const total = imageFiles.length;
+    let done = 0;
+    setUploadProgress(`0/${total}`);
     try {
       const newItems: MediaItem[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!file.type.startsWith("image/")) continue;
+      for (const file of imageFiles) {
         const url = await uploadSingleImage(
           file,
-          `${storagePath}/img-${Date.now()}-${i}.jpg`,
+          `${storagePath}/img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.jpg`,
           1920
         );
         newItems.push({ type: "image", url });
+        done++;
+        setUploadProgress(`${done}/${total}`);
       }
-      if (newItems.length) {
-        onChange([...items, ...newItems]);
-        toast.success(
-          `${newItems.length} photo${newItems.length > 1 ? "s" : ""} ajoutée${newItems.length > 1 ? "s" : ""}`
-        );
-      }
+      // Use ref to get latest items (avoids stale closure)
+      onChange([...itemsRef.current, ...newItems]);
+      toast.success(
+        `${newItems.length} photo${newItems.length > 1 ? "s" : ""} ajoutée${newItems.length > 1 ? "s" : ""}`
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erreur upload photo.";
       toast.error(msg);
     } finally {
       setUploading(false);
+      setUploadProgress("");
     }
   };
 
@@ -105,7 +114,7 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
         thumbnailUrl = await uploadVideoThumbnail(thumbBlob, thumbPath);
       }
 
-      onChange([...items, { type: "video", url, platform: "mp4", thumbnailUrl, format: "vertical" }]);
+      onChange([...itemsRef.current, { type: "video", url, platform: "mp4", thumbnailUrl, format: "vertical" }]);
       toast.success("Vidéo MP4 ajoutée !");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erreur upload MP4.";
@@ -125,7 +134,7 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
       return;
     }
     const ytFormat = detectVideoSource(url) === "youtube-short" ? "vertical" : "horizontal";
-    onChange([...items, { type: "video", url, platform: "youtube", format: ytFormat }]);
+    onChange([...itemsRef.current, { type: "video", url, platform: "youtube", format: ytFormat }]);
     setYoutubeUrl("");
     setShowYouTubeInput(false);
     toast.success("Lien YouTube ajouté !");
@@ -171,8 +180,11 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
         multiple
         className="hidden"
         onChange={(e) => {
-          if (e.target.files?.length) handlePhotosUpload(e.target.files);
+          // Copy files to Array BEFORE resetting input — iOS Safari
+          // invalidates the FileList when input.value is cleared
+          const files = Array.from(e.target.files || []);
           e.target.value = "";
+          if (files.length) handlePhotosUpload(files);
         }}
       />
       <input
@@ -197,7 +209,7 @@ export default function GalleryEditor({ items, onChange, storagePath }: GalleryE
             className="py-3 border-2 border-dashed border-blush-200 rounded-xl font-sans text-xs text-brown-500 hover:border-terracotta-300 hover:text-terracotta-500 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
           >
             <Upload size={13} />
-            {uploading ? "Upload..." : "+ Photos"}
+            {uploading ? `Upload ${uploadProgress}` : "+ Photos"}
           </button>
           <button
             type="button"
