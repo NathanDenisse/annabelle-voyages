@@ -570,7 +570,7 @@ function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolea
         poster={poster}
         controls
         playsInline
-        preload="auto"
+        preload={isActive ? "auto" : "none"}
         onCanPlay={handleCanPlay}
         onError={() => setError(true)}
         className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${

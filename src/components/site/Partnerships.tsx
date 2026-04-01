@@ -40,6 +40,7 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
   const [mp4Ready, setMp4Ready] = useState(false);
   const [isOnScreen, setIsOnScreen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const firstMedia = item.gallery[0] ?? null;
   const isMp4Cover = firstMedia?.platform === "mp4";
@@ -53,22 +54,29 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
     return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : item.logoUrl || null;
   })();
 
-  // Only play/load video when card is on screen — fully unload when off screen
+  // Detect when card enters/leaves viewport
   useEffect(() => {
     const el = cardRef.current;
     if (!el || !isMp4Cover) return;
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsOnScreen(entry.isIntersecting);
-        if (!entry.isIntersecting) {
-          setMp4Ready(false);
-        }
-      },
+      ([entry]) => setIsOnScreen(entry.isIntersecting),
       { rootMargin: "50px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, [isMp4Cover]);
+
+  // Load & play when on screen, pause when off
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isOnScreen) {
+      video.load();
+    } else {
+      video.pause();
+      setMp4Ready(false);
+    }
+  }, [isOnScreen]);
 
   const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
   const mediaCount = item.gallery.length;
@@ -89,12 +97,13 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
         <div className="absolute inset-0 bg-gradient-to-br from-[#4A3230] to-[#2A1815]" />
       )}
 
-      {/* MP4 video — mounted only when on screen, unmounted when off */}
-      {isMp4Cover && mp4Src && isOnScreen && (
+      {/* MP4 video — always mounted, loaded on demand when visible */}
+      {isMp4Cover && mp4Src && (
         <video
+          ref={videoRef}
           src={mp4Src}
-          autoPlay muted loop playsInline preload="auto"
-          onCanPlay={() => setMp4Ready(true)}
+          muted loop playsInline preload="none"
+          onCanPlay={() => { setMp4Ready(true); videoRef.current?.play().catch(() => {}); }}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
         />
       )}

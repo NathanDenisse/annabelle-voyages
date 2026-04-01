@@ -66,7 +66,7 @@ export default function NextTrip({ data }: NextTripProps) {
           muted
           loop
           playsInline
-          preload="auto"
+          preload="none"
           {...{ "webkit-playsinline": "true" }}
           onCanPlay={() => setVideoReady(true)}
           onPlaying={() => setVideoReady(true)}
