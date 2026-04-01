@@ -1,20 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
+export const dynamic = "force-dynamic";
+
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useSiteContent, useSocialLinks, usePortfolio, usePartnerships, useTestimonials, useNextTrip } from "@/hooks/useFirestore";
 import { useLanguageState, LanguageContext } from "@/hooks/useLanguage";
 import Navbar from "@/components/site/Navbar";
 import Hero from "@/components/site/Hero";
 import About from "@/components/site/About";
-import Portfolio from "@/components/site/Portfolio";
-import Partnerships from "@/components/site/Partnerships";
 
 // Below-fold sections — dynamically imported to reduce initial bundle
-const Testimonials = dynamic(() => import("@/components/site/Testimonials"));
-const NextTrip = dynamic(() => import("@/components/site/NextTrip"));
-const Contact = dynamic(() => import("@/components/site/Contact"));
-const Footer = dynamic(() => import("@/components/site/Footer"));
+const Portfolio = lazy(() => import("@/components/site/Portfolio"));
+const Partnerships = lazy(() => import("@/components/site/Partnerships"));
+const Testimonials = lazy(() => import("@/components/site/Testimonials"));
+const NextTrip = lazy(() => import("@/components/site/NextTrip"));
+const Contact = lazy(() => import("@/components/site/Contact"));
+const Footer = lazy(() => import("@/components/site/Footer"));
 
 export default function Home() {
   const { lang, setLang } = useLanguageState();
@@ -38,12 +39,14 @@ export default function Home() {
         <Navbar />
         <Hero content={content} socials={socials} />
         <About content={content} aboutImageUrl={content.aboutImageUrl} socials={socials} />
-        <Portfolio items={portfolioItems} content={content} />
-        <Partnerships items={partnerships} content={content} />
-        <Testimonials items={testimonials} />
-        <NextTrip data={nextTrip} />
-        <Contact content={content} />
-        <Footer content={content} socials={socials} />
+        <Suspense>
+          <Portfolio items={portfolioItems} content={content} />
+          <Partnerships items={partnerships} content={content} />
+          <Testimonials items={testimonials} />
+          <NextTrip data={nextTrip} />
+          <Contact content={content} />
+          <Footer content={content} socials={socials} />
+        </Suspense>
       </main>
     </LanguageContext.Provider>
   );

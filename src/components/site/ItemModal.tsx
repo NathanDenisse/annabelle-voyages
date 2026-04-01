@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ExternalLink, GalleryHorizontal, LayoutGrid, Play, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, GalleryHorizontal, LayoutGrid, X } from "lucide-react";
+import { animate, motion, useMotionValue } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
 import { MediaItem } from "@/types";
 import { detectVideoSource, getYouTubeId } from "@/lib/storage";
@@ -29,13 +30,9 @@ export default function ItemModal({
   const { lang } = useLanguage();
   const [viewMode, setViewMode] = useState<ViewMode>("scroll");
   const [scrollIndex, setScrollIndex] = useState(0);
-  const [visible, setVisible] = useState(false);
+  const dragY = useMotionValue(0);
+  const closing = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Animate in on mount (no transform — just opacity)
-  useEffect(() => {
-    requestAnimationFrame(() => setVisible(true));
-  }, []);
 
   // Lock body scroll
   useEffect(() => {
@@ -53,27 +50,79 @@ export default function ItemModal({
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  // Swipe-down-to-close (mobile) — only when scrolled to top
+  useEffect(() => {
+    let startY = 0, startX = 0, determined = false, isVertical = false;
+
+    const onStart = (e: TouchEvent) => {
+      if (closing.current) return;
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+      determined = false;
+      isVertical = false;
+    };
+
+    const onMove = (e: TouchEvent) => {
+      if (closing.current) return;
+      const scrollTop = scrollRef.current?.scrollTop ?? 0;
+      const dy = e.touches[0].clientY - startY;
+      const dx = e.touches[0].clientX - startX;
+      if (!determined && (Math.abs(dy) > 8 || Math.abs(dx) > 8)) {
+        determined = true;
+        isVertical = scrollTop === 0 && dy > 0 && Math.abs(dy) > Math.abs(dx);
+      }
+      if (isVertical) dragY.set(Math.max(0, dy));
+    };
+
+    const onEnd = () => {
+      if (closing.current) return;
+      if (isVertical && dragY.get() > 150) {
+        closing.current = true;
+        animate(dragY, window.innerHeight, { duration: 0.25, ease: "easeOut", onComplete: onClose });
+      } else {
+        animate(dragY, 0, { type: "spring", stiffness: 400, damping: 35 });
+      }
+      determined = false;
+      isVertical = false;
+    };
+
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onEnd);
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+    };
+  }, [dragY, onClose]);
+
   return (
-    // Backdrop — NO transform, NO backdrop-filter
-    <div
-      className={`fixed inset-0 z-50 bg-black/95 transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/95"
       onClick={onClose}
     >
-      {/* Dialog — NO motion.div, NO transform, NO backdrop-filter */}
-      <div
+      <motion.div
         role="dialog"
         aria-modal="true"
         aria-labelledby="item-modal-title"
+        style={{ y: dragY }}
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", stiffness: 340, damping: 40 }}
         onClick={(e) => e.stopPropagation()}
-        className={`absolute inset-0 bg-[#120E0C] flex flex-col transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}
+        className="absolute inset-0 bg-[#120E0C] flex flex-col"
       >
         {/* Mobile drag handle */}
         <div className="flex justify-center pt-3 pb-0 md:hidden flex-shrink-0">
           <div className="w-10 h-1 rounded-full bg-white/20" />
         </div>
 
-        {/* Header — NO backdrop-blur (iOS Safari rendering bug) */}
-        <div className="sticky top-0 z-10 bg-[#120E0C] border-b border-white/10 px-5 py-4 flex items-start justify-between gap-4 flex-shrink-0">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-[#120E0C]/95 backdrop-blur-sm border-b border-white/10 px-5 py-4 flex items-start justify-between gap-4 flex-shrink-0">
           <div className="flex-1 min-w-0">
             <h2 id="item-modal-title" className="font-serif italic text-xl md:text-2xl text-white leading-tight">{title}</h2>
             {description && (
@@ -149,8 +198,8 @@ export default function ItemModal({
             onIndexChange={setScrollIndex}
           />
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -191,7 +240,7 @@ function GridThumb({ item, isActive, onClick }: { item: MediaItem; isActive: boo
       onClick={onClick}
       className={`group relative aspect-square rounded-xl overflow-hidden bg-white/5 transition-all duration-200 focus:outline-none ${
         isActive
-          ? "ring-2 ring-white/60"
+          ? "ring-2 ring-white/60 scale-[1.02]"
           : "hover:ring-2 hover:ring-white/30"
       }`}
     >
@@ -200,7 +249,7 @@ function GridThumb({ item, isActive, onClick }: { item: MediaItem; isActive: boo
         <img
           src={thumbnail}
           alt="Media thumbnail"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
           loading="lazy"
         />
       ) : (
@@ -213,7 +262,7 @@ function GridThumb({ item, isActive, onClick }: { item: MediaItem; isActive: boo
       {/* Play indicator overlay for videos */}
       {item.type === "video" && thumbnail && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
             <div className="w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-l-[8px] border-l-white ml-0.5" />
           </div>
         </div>
@@ -378,7 +427,7 @@ function ThumbPill({ item, isActive, onClick }: { item: MediaItem; isActive: boo
       onClick={onClick}
       className={`flex-shrink-0 rounded-md overflow-hidden transition-all duration-200 ${
         isActive
-          ? "w-12 h-12 ring-2 ring-white/80"
+          ? "w-12 h-12 ring-2 ring-white/80 scale-110"
           : "w-10 h-10 opacity-50 hover:opacity-80"
       }`}
     >
@@ -402,6 +451,7 @@ function ScrollItem({ item, isActive }: { item: MediaItem; isActive: boolean }) 
   if (item.type === "image") {
     return (
       <div className="relative max-w-full max-h-full flex items-center justify-center">
+        {/* Shimmer placeholder */}
         {!loaded && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-full h-64 rounded-xl bg-white/5 animate-pulse" />
@@ -429,58 +479,58 @@ function ScrollItem({ item, isActive }: { item: MediaItem; isActive: boolean }) 
     );
   }
 
-  // YouTube/Shorts/Reels/TikTok — open in new tab (avoids all iOS iframe bugs)
+  // YouTube — facade: show thumbnail until user clicks play
+  const videoId = getYouTubeId(item.url);
+  if (!videoId) return null;
+  const isShort = detectVideoSource(item.url) === "youtube-short";
   return (
-    <YouTubeOpenExternal item={item} />
+    <YouTubeFacade videoId={videoId} isShort={isShort} isActive={isActive} />
   );
 }
 
-// ─── YouTube: thumbnail + open in new tab on click ───────────────────────────
-// No iframe at all — eliminates iOS Safari transform/iframe bugs completely.
+// ─── YouTube Facade (thumbnail → iframe on click) ────────────────────────────
 
-function YouTubeOpenExternal({ item }: { item: MediaItem }) {
-  const videoId = getYouTubeId(item.url);
-  const isShort = detectVideoSource(item.url) === "youtube-short";
-  const thumbnail = videoId
-    ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
-    : null;
-  const paddingBottom = isShort ? "177.78%" : "56.25%";
-
-  const handleOpen = () => {
-    window.open(item.url, "_blank", "noopener");
-  };
+function YouTubeFacade({ videoId, isShort, isActive }: { videoId: string; isShort: boolean; isActive: boolean }) {
+  const [playing, setPlaying] = useState(false);
 
   return (
     <div
-      className={`relative rounded-xl ${isShort ? "max-w-xs w-full" : "w-full max-w-3xl"}`}
-      style={{ paddingBottom, height: 0, overflow: "visible" }}
+      className={`relative rounded-xl overflow-hidden w-full ${
+        isShort ? "max-w-xs aspect-[9/16]" : "aspect-video"
+      }`}
     >
-      <button
-        onClick={handleOpen}
-        className="absolute top-0 left-0 w-full h-full group cursor-pointer rounded-xl overflow-hidden"
-        aria-label="Open video"
-      >
-        {thumbnail ? (
-          // eslint-disable-next-line @next/next/no-img-element
+      {playing ? (
+        <iframe
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&rel=0&modestbranding=1&playsinline=1`}
+          allow="autoplay; encrypted-media; fullscreen"
+          allowFullScreen
+          loading="lazy"
+          className="absolute inset-0 w-full h-full border-none"
+        />
+      ) : (
+        <button
+          onClick={() => setPlaying(true)}
+          className="absolute inset-0 w-full h-full group cursor-pointer"
+          aria-label="Play video"
+        >
+          {/* Thumbnail */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={thumbnail}
+            src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
             alt="Video thumbnail"
             className="w-full h-full object-cover"
+            loading="lazy"
           />
-        ) : (
-          <div className="w-full h-full bg-white/5" />
-        )}
-        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <div className="w-16 h-16 rounded-full bg-white/90 group-hover:bg-white group-hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-lg">
-            <Play size={22} className="text-brown-900 ml-1" fill="currentColor" />
+          {/* Dark overlay */}
+          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors" />
+          {/* Play button */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-white/90 group-hover:bg-white group-hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-lg">
+              <div className="w-0 h-0 border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent border-l-[16px] border-l-brown-900 ml-1" />
+            </div>
           </div>
-          <span className="flex items-center gap-1.5 font-sans text-xs text-white/80 bg-black/40 px-3 py-1.5 rounded-full">
-            <ExternalLink size={12} />
-            YouTube
-          </span>
-        </div>
-      </button>
+        </button>
+      )}
     </div>
   );
 }
@@ -488,72 +538,33 @@ function YouTubeOpenExternal({ item }: { item: MediaItem }) {
 // ─── Video with loading spinner ─────────────────────────────────────────────────
 
 function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolean }) {
-  const { lang } = useLanguage();
   const [ready, setReady] = useState(false);
-  const [error, setError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (isActive) {
-      setReady(false);
-      setError(false);
-      video.load();
-      // Don't call play() here — let handleCanPlay trigger it after data loads
-    } else {
-      video.pause();
+    if (!isActive && videoRef.current) {
+      videoRef.current.pause();
     }
   }, [isActive]);
 
-  const handleCanPlay = useCallback(() => {
-    setReady(true);
-    if (videoRef.current) {
-      videoRef.current.play().catch(() => {});
-    }
-  }, []);
-
-  const poster = item.thumbnailUrl || undefined;
-  const isVertical = item.format === "vertical";
-
   return (
-    <div className={`relative rounded-xl overflow-hidden w-full ${
-      isVertical ? "max-w-xs aspect-[9/16]" : "aspect-video"
-    }`}>
-      {poster && !ready && !error && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={poster}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover rounded-xl"
-        />
-      )}
-      {!ready && !error && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
+    <>
+      {!ready && (
+        <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-10 h-10 border-2 border-white/20 border-t-white/70 rounded-full animate-spin" />
-        </div>
-      )}
-      {/* Error state */}
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/80 rounded-xl">
-          <p className="font-sans text-sm text-white/50">
-            {lang === "fr" ? "Vidéo indisponible" : "Video unavailable"}
-          </p>
         </div>
       )}
       <video
         ref={videoRef}
         src={item.url}
-        poster={poster}
         controls
+        autoPlay={isActive}
         playsInline
-        preload={isActive ? "auto" : "none"}
-        onCanPlay={handleCanPlay}
-        onError={() => setError(true)}
-        className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${
+        onCanPlay={() => setReady(true)}
+        className={`max-w-full max-h-full rounded-xl transition-opacity duration-300 ${
           ready ? "opacity-100" : "opacity-0"
         }`}
       />
-    </div>
+    </>
   );
 }

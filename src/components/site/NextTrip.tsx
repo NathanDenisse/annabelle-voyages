@@ -18,21 +18,17 @@ export default function NextTrip({ data }: NextTripProps) {
   const isInView = useInView(contentRef, { once: true, margin: "-60px" });
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoReady, setVideoReady] = useState(false);
-  const videoTriggerRef = useRef(null);
-  const shouldLoadVideo = useInView(videoTriggerRef, { once: true, margin: "200px" });
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !data.backgroundVideoUrl || !shouldLoadVideo) return;
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        video.muted = true;
-        video.play().catch(() => {});
-      }
-    };
+    if (!video || !data.backgroundVideoUrl) return;
+    const tryPlay = () => { video.muted = true; video.play().catch(() => {}); };
+    tryPlay();
+    const t1 = setTimeout(tryPlay, 500);
+    const onVisibility = () => { if (document.visibilityState === "visible") tryPlay(); };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [data.backgroundVideoUrl, shouldLoadVideo]);
+    return () => { clearTimeout(t1); document.removeEventListener("visibilitychange", onVisibility); };
+  }, [data.backgroundVideoUrl]);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -56,25 +52,22 @@ export default function NextTrip({ data }: NextTripProps) {
       className="relative w-full min-h-[60vh] md:min-h-[70vh] flex items-center justify-center overflow-hidden"
       style={{ backgroundColor: "#0E7C7B" }}
     >
-      {/* Background video — mounted only when section approaches viewport */}
-      <div ref={videoTriggerRef} className="absolute inset-0" />
-      {data.backgroundVideoUrl && shouldLoadVideo && (
-        <video
-          ref={videoRef}
-          src={data.backgroundVideoUrl}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="none"
-          {...{ "webkit-playsinline": "true" }}
-          onCanPlay={() => setVideoReady(true)}
-          onPlaying={() => setVideoReady(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
-            videoReady ? "opacity-100" : "opacity-0"
-          }`}
-        />
-      )}
+      {/* Background video */}
+      <video
+        ref={videoRef}
+        src={data.backgroundVideoUrl || undefined}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        {...{ "webkit-playsinline": "true" }}
+        onCanPlay={() => setVideoReady(true)}
+        onPlaying={() => setVideoReady(true)}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
+          videoReady && data.backgroundVideoUrl ? "opacity-100" : "opacity-0"
+        }`}
+      />
 
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/50 pointer-events-none" />

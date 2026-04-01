@@ -78,21 +78,10 @@ export default function Hero({ content, socials }: HeroProps) {
     >
       {/* ── Vidéo — fade-in indépendant du contenu texte ── */}
       <div className="absolute inset-0">
-        {/* Poster image — visible immédiatement pendant le chargement vidéo */}
-        {content.heroImageUrl && (
-          <img
-            src={content.heroImageUrl}
-            alt=""
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[800ms] ease-out ${
-              videoReady ? "opacity-0" : "opacity-100"
-            }`}
-          />
-        )}
         <video
           ref={videoRef}
           id="hero-video"
           src={videoUrl || undefined}
-          poster={content.heroImageUrl || undefined}
           autoPlay
           muted
           loop
@@ -105,8 +94,8 @@ export default function Hero({ content, socials }: HeroProps) {
             videoReady ? "opacity-100" : "opacity-0"
           }`}
         />
-        <div className={`absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/60 transition-opacity duration-[800ms] ease-out ${videoReady || content.heroImageUrl ? "opacity-100" : "opacity-0"}`} />
-        <div className={`absolute inset-0 bg-black/10 transition-opacity duration-[800ms] ease-out ${videoReady || content.heroImageUrl ? "opacity-100" : "opacity-0"}`} />
+        <div className={`absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/60 transition-opacity duration-[800ms] ease-out ${videoReady ? "opacity-100" : "opacity-0"}`} />
+        <div className={`absolute inset-0 bg-black/10 transition-opacity duration-[800ms] ease-out ${videoReady ? "opacity-100" : "opacity-0"}`} />
       </div>
 
       {/* ── Contenu — toujours visible, jamais conditionné à videoReady ── */}
