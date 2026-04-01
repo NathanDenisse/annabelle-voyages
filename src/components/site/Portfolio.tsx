@@ -9,7 +9,7 @@ import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { t, filterLabels } from "@/lib/i18n";
-import { PortfolioItem, Partnership, MediaCategory, SiteContent, CATEGORY_LABELS } from "@/types";
+import { PortfolioItem, MediaCategory, SiteContent, CATEGORY_LABELS } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
 import {
   detectVideoSource,
@@ -19,22 +19,7 @@ import ItemModal from "./ItemModal";
 
 interface PortfolioProps {
   items: PortfolioItem[];
-  partnerships?: Partnership[];
   content: SiteContent;
-}
-
-/** Convert a Partnership to a PortfolioItem for unified display in "My Work" */
-function partnershipToItem(p: Partnership): PortfolioItem {
-  return {
-    id: `partnership-${p.id}`,
-    title: { fr: p.name, en: p.name },
-    location: "",
-    category: "hotel",
-    description: p.description,
-    gallery: p.gallery,
-    order: p.order,
-    visible: p.visible !== false,
-  };
 }
 
 const categories: (MediaCategory | "all")[] = ["all", "hotel", "paysage", "lifestyle", "drone", "activity"];
@@ -144,12 +129,11 @@ const MediaCard = memo(function MediaCard({
 });
 
 // ─── Main component ───
-export default function Portfolio({ items, partnerships = [], content }: PortfolioProps) {
+export default function Portfolio({ items, content }: PortfolioProps) {
   const { lang } = useLanguage();
   const isDesktop = useBreakpoint();
   const [activeCategory, setActiveCategory] = useState<MediaCategory | "all">("all");
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
-  const [scrollPaused, setScrollPaused] = useState(false);
   const headerRef = useRef(null);
   const isInView = useInView(headerRef, { once: true, margin: "-80px" });
 
@@ -165,11 +149,7 @@ export default function Portfolio({ items, partnerships = [], content }: Portfol
     [autoScrollPlugin]
   );
 
-  // Merge portfolio items + partnerships (partnerships always appear last, category "hotel")
-  const visibleItems = [
-    ...items.filter((item) => item.visible),
-    ...partnerships.filter((p) => p.visible !== false).map(partnershipToItem),
-  ];
+  const visibleItems = items.filter((item) => item.visible);
   const filtered = activeCategory === "all"
     ? visibleItems
     : visibleItems.filter((item) => item.category === activeCategory);
