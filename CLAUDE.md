@@ -2,30 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-<!-- VERCEL BEST PRACTICES START -->
-## Best practices for developing on Vercel
+## Vercel Deployment Notes
 
-These defaults are optimized for AI coding agents (and humans) working on apps that deploy to Vercel.
-
-- Treat Vercel Functions as stateless + ephemeral (no durable RAM/FS, no background daemons), use Blob or marketplace integrations for preserving state
-- Edge Functions (standalone) are deprecated; prefer Vercel Functions
-- Don't start new projects on Vercel KV/Postgres (both discontinued); use Marketplace Redis/Postgres instead
-- Store secrets in Vercel Env Variables; not in git or `NEXT_PUBLIC_*`
-- Provision Marketplace native integrations with `vercel integration add` (CI/agent-friendly)
-- Sync env + project settings with `vercel env pull` / `vercel pull` when you need local/offline parity
-- Use `waitUntil` for post-response work; avoid the deprecated Function `context` parameter
-- Set Function regions near your primary data source; avoid cross-region DB/service roundtrips
-- Tune Fluid Compute knobs (e.g., `maxDuration`, memory/CPU) for long I/O-heavy calls (LLMs, APIs)
-- Use Runtime Cache for fast **regional** caching + tag invalidation (don't treat it as global KV)
-- Use Cron Jobs for schedules; cron runs in UTC and triggers your production URL via HTTP GET
-- Use Vercel Blob for uploads/media; Use Edge Config for small, globally-read config
-- If Enable Deployment Protection is enabled, use a bypass secret to directly access them
-- Add OpenTelemetry via `@vercel/otel` on Node; don't expect OTEL support on the Edge runtime
-- Enable Web Analytics + Speed Insights early
-- Use AI Gateway for model routing, set AI_GATEWAY_API_KEY, using a model string (e.g. 'anthropic/claude-sonnet-4.6'), Gateway is already default in AI SDK
-  needed. Always curl https://ai-gateway.vercel.sh/v1/models first; never trust model IDs from memory
-- For durable agent loops or untrusted code: use Workflow (pause/resume/state) + Sandbox; use Vercel MCP for secure infra access
-<!-- VERCEL BEST PRACTICES END -->
+- Deployed on Vercel; treat Functions as stateless + ephemeral
+- Store secrets in Vercel Env Variables, not in git or `NEXT_PUBLIC_*`
+- Sync env locally with `vercel env pull` / `vercel pull`
 
 ## Project Overview
 
@@ -48,11 +29,15 @@ No test suite is configured.
 
 **Stack:** Next.js 14 (App Router) · TypeScript · Firebase (Firestore + Auth + Storage) · Tailwind CSS · Framer Motion · Embla Carousel · dnd-kit
 
-**Node:** 22.x (see `.node-version`)
+**Node:** `.node-version` says 22.x but `package.json` engines says 20.x — verify which runtime the deploy target uses before upgrading APIs.
 
 **Key path alias:** `@/*` → `./src/*`
 
-**Rendering:** The homepage (`page.tsx`) uses `export const dynamic = "force-dynamic"` and is fully client-side (`"use client"`). All data comes from Firestore real-time listeners, not SSR.
+**Rendering:** The homepage (`page.tsx`) uses `export const dynamic = "force-dynamic"` and is fully client-side (`"use client"`). All data comes from Firestore real-time listeners, not SSR. Heavy sections (Portfolio, Partnerships, etc.) are lazy-loaded with `React.lazy` + `Suspense`.
+
+**Component organization:** `src/components/site/` = public-facing sections, `src/components/admin/` = dashboard UI. Types live in `src/types/index.ts`.
+
+**Allowed image domains** (`next.config.js`): `firebasestorage.googleapis.com`, `img.youtube.com`, `i.ytimg.com`. Add new domains here when introducing external image sources.
 
 ### Data Layer (Firebase, no ORM)
 
@@ -91,11 +76,11 @@ Admin forms use `useAutosave()` (debounced writes) and `SmartBilingualField` (FR
 
 ### AI Integration
 
-Two server-side API routes call the Anthropic SDK:
+Two server-side API routes call the Anthropic API via direct `fetch` (no SDK dependency):
 - `/api/translate` — FR ↔ EN translation
 - `/api/suggest` — bilingual content suggestions for portfolio/partnership fields
 
-Requires `ANTHROPIC_API_KEY` in environment (not in `.env.local.example` — must be added manually).
+Model: `claude-sonnet-4-20250514`. Requires `ANTHROPIC_API_KEY` in environment (not in `.env.local.example` — must be added manually).
 
 ### Media Uploads
 

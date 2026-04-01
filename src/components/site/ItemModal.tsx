@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, GalleryHorizontal, LayoutGrid, X } from "lucide-react";
 import { animate, motion, useMotionValue } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
@@ -445,7 +445,7 @@ function ThumbPill({ item, isActive, onClick }: { item: MediaItem; isActive: boo
 
 // ─── Scroll Item (single media) ─────────────────────────────────────────────────
 
-function ScrollItem({ item, isActive }: { item: MediaItem; isActive: boolean }) {
+const ScrollItem = memo(function ScrollItem({ item, isActive }: { item: MediaItem; isActive: boolean }) {
   const [loaded, setLoaded] = useState(false);
 
   if (item.type === "image") {
@@ -486,12 +486,17 @@ function ScrollItem({ item, isActive }: { item: MediaItem; isActive: boolean }) 
   return (
     <YouTubeFacade videoId={videoId} isShort={isShort} isActive={isActive} />
   );
-}
+});
 
 // ─── YouTube Facade (thumbnail → iframe on click) ────────────────────────────
 
-function YouTubeFacade({ videoId, isShort, isActive }: { videoId: string; isShort: boolean; isActive: boolean }) {
+const YouTubeFacade = memo(function YouTubeFacade({ videoId, isShort, isActive }: { videoId: string; isShort: boolean; isActive: boolean }) {
   const [playing, setPlaying] = useState(false);
+
+  // Remove iframe when slide becomes inactive — prevents accumulating iframes
+  useEffect(() => {
+    if (!isActive) setPlaying(false);
+  }, [isActive]);
 
   return (
     <div
@@ -533,19 +538,35 @@ function YouTubeFacade({ videoId, isShort, isActive }: { videoId: string; isShor
       )}
     </div>
   );
-}
+});
 
 // ─── Video with loading spinner ─────────────────────────────────────────────────
 
-function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolean }) {
+const VideoWithLoader = memo(function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolean }) {
   const [ready, setReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (!isActive && videoRef.current) {
-      videoRef.current.pause();
+    const video = videoRef.current;
+    if (!video) return;
+    if (isActive) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
     }
   }, [isActive]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    const video = videoRef.current;
+    return () => {
+      if (video) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -558,8 +579,8 @@ function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolea
         ref={videoRef}
         src={item.url}
         controls
-        autoPlay={isActive}
         playsInline
+        preload={isActive ? "auto" : "none"}
         onCanPlay={() => setReady(true)}
         className={`max-w-full max-h-full rounded-xl transition-opacity duration-300 ${
           ready ? "opacity-100" : "opacity-0"
@@ -567,4 +588,4 @@ function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolea
       />
     </>
   );
-}
+});

@@ -1,23 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect, memo } from "react";
-import { useInView } from "framer-motion";
+import { useState, useRef, memo, useCallback } from "react";
+import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { MapPin, Play } from "lucide-react";
-import useEmblaCarousel from "embla-carousel-react";
-import AutoScroll from "embla-carousel-auto-scroll";
+import { MapPin } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { t, filterLabels } from "@/lib/i18n";
 import { PortfolioItem, MediaCategory, SiteContent, CATEGORY_LABELS } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
-import {
-  detectVideoSource,
-  getYouTubeId,
-  getVideoEmbedUrl,
-} from "@/lib/storage";
-import dynamic from "next/dynamic";
-const ItemModal = dynamic(() => import("./ItemModal"), { ssr: false });
+import { getYouTubeId } from "@/lib/storage";
+import ItemModal from "./ItemModal";
+import MediaCarousel, { CardFormat } from "./MediaCarousel";
 
 interface PortfolioProps {
   items: PortfolioItem[];
@@ -26,20 +19,7 @@ interface PortfolioProps {
 
 const categories: (MediaCategory | "all")[] = ["all", "hotel", "paysage", "lifestyle", "drone", "activity"];
 
-type CardFormat = "vertical" | "horizontal";
-
-function getCardFormat(item: PortfolioItem): CardFormat {
-  const first = item.gallery[0];
-  if (!first) return "horizontal";
-  if (first.format) return first.format;
-  if (first.platform === "mp4") return "vertical";
-  if (first.platform === "youtube") {
-    return detectVideoSource(first.url) === "youtube-short" ? "vertical" : "horizontal";
-  }
-  return "horizontal";
-}
-
-/** Card cover thumbnail — always a static image */
+/** Card cover thumbnail — gallery[0] is the only source */
 function getCardThumbnail(item: PortfolioItem): string {
   const first = item.gallery[0];
   if (!first) return "/images/placeholders/portfolio.svg";
@@ -49,12 +29,8 @@ function getCardThumbnail(item: PortfolioItem): string {
   return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : "";
 }
 
-function isVideoItem(item: PortfolioItem): boolean {
-  return item.gallery[0]?.type === "video";
-}
-
-// ─── Card — static thumbnail, play icon for videos ───
-const MediaCard = memo(function MediaCard({
+// ─── Card ───
+const PortfolioCard = memo(function PortfolioCard({
   item,
   lang,
   format,
@@ -66,7 +42,7 @@ const MediaCard = memo(function MediaCard({
   onClick: () => void;
 }) {
   const thumbnail = getCardThumbnail(item);
-  const isVideo = isVideoItem(item);
+  const isVideo = item.gallery[0]?.type === "video";
   const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
   const mediaCount = item.gallery.length;
 
@@ -75,33 +51,19 @@ const MediaCard = memo(function MediaCard({
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
-      {/* Cover: static image or video first-frame */}
-      {thumbnail ? (
-        <Image
-          src={thumbnail}
-          alt={t(item.title, lang)}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
-        />
-      ) : isVideo && item.gallery[0]?.url ? (
-        <video
-          src={item.gallery[0].url}
-          className="absolute inset-0 w-full h-full object-cover"
-          muted playsInline preload="metadata"
-        />
-      ) : null}
+      {thumbnail && (
+        <Image src={thumbnail} alt={t(item.title, lang)} fill className="object-cover" loading="lazy" />
+      )}
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent pointer-events-none" />
-
-      {/* Play icon */}
       {isVideo && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="w-14 h-14 rounded-full bg-white/90 group-hover:bg-white group-hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-lg">
-            <Play size={22} className="text-brown-900 ml-1" fill="currentColor" />
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+            <div className="w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-l-[13px] border-l-white ml-1" />
           </div>
         </div>
       )}
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent pointer-events-none" />
 
       <div className="absolute top-3 left-3 z-10">
         <span className="bg-white/80 backdrop-blur-sm text-brown-700 text-xs font-sans font-medium px-2.5 py-1 rounded-full">
@@ -128,44 +90,34 @@ const MediaCard = memo(function MediaCard({
   );
 });
 
-// ─── Main ───
+// ─── Main component ───
 export default function Portfolio({ items, content }: PortfolioProps) {
   const { lang } = useLanguage();
-  const isDesktop = useBreakpoint();
   const [activeCategory, setActiveCategory] = useState<MediaCategory | "all">("all");
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const headerRef = useRef(null);
   const isInView = useInView(headerRef, { once: true, margin: "-80px" });
-
-  const autoScrollPlugin = useRef(AutoScroll({
-    speed: 0.8, stopOnInteraction: false, stopOnMouseEnter: true, startDelay: 0,
-  })).current;
-
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    { loop: true, align: "start", dragFree: true, active: !isDesktop },
-    [autoScrollPlugin]
-  );
 
   const visibleItems = items.filter((item) => item.visible);
   const filtered = activeCategory === "all"
     ? visibleItems
     : visibleItems.filter((item) => item.category === activeCategory);
 
-  useEffect(() => {
-    if (emblaApi) emblaApi.reInit();
-  }, [activeCategory, emblaApi, isDesktop]);
+  const getGallery = useCallback((item: PortfolioItem) => item.gallery, []);
+  const getKey = useCallback((item: PortfolioItem) => item.id, []);
 
-  const handleCardClick = (item: PortfolioItem) => {
-    const first = item.gallery[0];
-    // Single YouTube/external video → open in new tab
-    if (item.gallery.length === 1 && first?.type === "video" && first.platform !== "mp4") {
-      const embedUrl = getVideoEmbedUrl(first.url);
-      window.open(embedUrl || first.url, "_blank", "noopener");
-      return;
-    }
-    // Everything else → modal
-    setSelectedItem(item);
-  };
+  const renderCard = useCallback(
+    (item: PortfolioItem, format: CardFormat) => (
+      <PortfolioCard
+        key={item.id}
+        item={item}
+        lang={lang}
+        format={format}
+        onClick={() => setSelectedItem(item)}
+      />
+    ),
+    [lang]
+  );
 
   const selectedGallery = selectedItem?.gallery ?? [];
 
@@ -177,6 +129,7 @@ export default function Portfolio({ items, content }: PortfolioProps) {
           <h2 className="font-script text-6xl md:text-7xl text-brown-900">{lang === "fr" ? "Mon travail" : "My work"}</h2>
           <div className={`w-16 h-px bg-terracotta-400 mx-auto mt-4 transition-all duration-700 delay-300 ${isInView ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`} />
         </div>
+
         <div className={`flex flex-wrap justify-center gap-2 mb-6 transition-all duration-500 delay-200 ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
           {categories.map((cat) => (
             <button key={cat} onClick={() => setActiveCategory(cat)}
@@ -188,28 +141,13 @@ export default function Portfolio({ items, content }: PortfolioProps) {
       </div>
 
       {filtered.length > 0 ? (
-        isDesktop ? (
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-3 gap-4">
-              {filtered.map((item) => (
-                <MediaCard key={item.id} item={item} lang={lang} format="horizontal" onClick={() => handleCardClick(item)} />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="overflow-hidden" ref={emblaRef}>
-            <div className="flex">
-              {filtered.map((item) => {
-                const format = getCardFormat(item);
-                return (
-                  <div key={item.id} className={`flex-none px-1.5 ${format === "vertical" ? "w-[55%]" : "w-[80%]"}`}>
-                    <MediaCard item={item} lang={lang} format={format} onClick={() => handleCardClick(item)} />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )
+        <MediaCarousel
+          items={filtered}
+          renderCard={renderCard}
+          getGallery={getGallery}
+          getKey={getKey}
+          reInitDeps={[activeCategory]}
+        />
       ) : (
         <p className="text-center font-sans text-brown-300 py-16 text-sm">
           {lang === "fr" ? "Aucun contenu dans cette catégorie" : "No content in this category"}
@@ -220,16 +158,18 @@ export default function Portfolio({ items, content }: PortfolioProps) {
         <ScrollTeaser textFr="Ils m'ont fait confiance ↓" textEn="They trusted me ↓" target="#partnerships" light />
       </div>
 
-      {selectedItem && (
-        <ItemModal
-          gallery={selectedGallery}
-          title={t(selectedItem.title, lang)}
-          description={selectedItem.description ? t(selectedItem.description, lang) : undefined}
-          location={selectedItem.location}
-          categoryLabel={t(CATEGORY_LABELS[selectedItem.category], lang)}
-          onClose={() => setSelectedItem(null)}
-        />
-      )}
+      <AnimatePresence>
+        {selectedItem && (
+          <ItemModal
+            gallery={selectedGallery}
+            title={t(selectedItem.title, lang)}
+            description={selectedItem.description ? t(selectedItem.description, lang) : undefined}
+            location={selectedItem.location}
+            categoryLabel={t(CATEGORY_LABELS[selectedItem.category], lang)}
+            onClose={() => setSelectedItem(null)}
+          />
+        )}
+      </AnimatePresence>
     </section>
   );
 }

@@ -1,41 +1,33 @@
 "use client";
 
-import { useRef, useState, useEffect, memo } from "react";
-import { useInView } from "framer-motion";
+import { useRef, useState, memo, useCallback } from "react";
+import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import useEmblaCarousel from "embla-carousel-react";
-import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { t } from "@/lib/i18n";
 import { Partnership, SiteContent } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
-import { detectVideoSource, getYouTubeId } from "@/lib/storage";
-import dynamic from "next/dynamic";
-const ItemModal = dynamic(() => import("./ItemModal"), { ssr: false });
+import { getYouTubeId } from "@/lib/storage";
+import ItemModal from "./ItemModal";
+import MediaCarousel, { CardFormat } from "./MediaCarousel";
 
 interface PartnershipsProps {
   items: Partnership[];
   content: SiteContent;
 }
 
-type CardFormat = "vertical" | "horizontal";
-
-function getPartnershipFormat(item: Partnership): CardFormat {
-  const first = item.gallery[0];
-  if (!first) return "horizontal";
-  if (first.format) return first.format;
-  if (first.platform === "mp4") return "vertical";
-  if (first.platform === "youtube") {
-    return detectVideoSource(first.url) === "youtube-short" ? "vertical" : "horizontal";
-  }
-  return "horizontal";
-}
-
-// ─── Card — static thumbnail only ───
-const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partnership; onClick: () => void; format?: CardFormat }) {
-  const { lang } = useLanguage();
-
+// ─── Card ───
+const PartnershipCard = memo(function PartnershipCard({
+  item,
+  lang,
+  format,
+  onClick,
+}: {
+  item: Partnership;
+  lang: "fr" | "en";
+  format: CardFormat;
+  onClick: () => void;
+}) {
   const firstMedia = item.gallery[0] ?? null;
   const isVideo = firstMedia?.type === "video";
 
@@ -56,32 +48,23 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
       className={`group relative rounded-2xl overflow-hidden border border-white/10 hover:border-terracotta-500/40 cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
       {coverImage ? (
-        <Image src={coverImage} alt={item.name} fill
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
-        />
-      ) : isVideo && firstMedia ? (
-        <video
-          src={firstMedia.url}
-          className="absolute inset-0 w-full h-full object-cover"
-          muted playsInline preload="metadata"
-        />
+        <Image src={coverImage} alt={item.name} fill className="object-cover" loading="lazy" />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#4A3230] to-[#2A1815]" />
       )}
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
-
       {isVideo && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="w-12 h-12 rounded-full bg-white/80 group-hover:bg-white group-hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-lg">
-            <div className="w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-l-[13px] border-l-brown-900 ml-0.5" />
+        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+          <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+            <div className="w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-l-[13px] border-l-white ml-1" />
           </div>
         </div>
       )}
 
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
+
       {mediaCount > 1 && (
-        <div className="absolute top-3 right-3 z-10 bg-black/50 backdrop-blur-sm text-white text-xs font-sans px-2.5 py-1 rounded-full">
+        <div className="absolute top-3 right-3 z-20 bg-black/50 backdrop-blur-sm text-white text-xs font-sans px-2.5 py-1 rounded-full">
           {mediaCount} {lang === "fr" ? "médias" : "media"}
         </div>
       )}
@@ -98,28 +81,30 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
   );
 });
 
-// ─── Main ───
+// ─── Main component ───
 export default function Partnerships({ items, content }: PartnershipsProps) {
   const { lang } = useLanguage();
-  const isDesktop = useBreakpoint();
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [selectedPartnership, setSelectedPartnership] = useState<Partnership | null>(null);
 
-  const autoScrollPlugin = useRef(AutoScroll({
-    speed: 0.8, stopOnInteraction: false, stopOnMouseEnter: true, startDelay: 0,
-  })).current;
-
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    { loop: true, align: "start", dragFree: true, active: !isDesktop },
-    [autoScrollPlugin]
-  );
-
   const visible = items.filter((item) => item.visible !== false);
 
-  useEffect(() => {
-    if (emblaApi) emblaApi.reInit();
-  }, [emblaApi, isDesktop]);
+  const getGallery = useCallback((item: Partnership) => item.gallery, []);
+  const getKey = useCallback((item: Partnership) => item.id, []);
+
+  const renderCard = useCallback(
+    (item: Partnership, format: CardFormat) => (
+      <PartnershipCard
+        key={item.id}
+        item={item}
+        lang={lang}
+        format={format}
+        onClick={() => setSelectedPartnership(item)}
+      />
+    ),
+    [lang]
+  );
 
   if (visible.length === 0) return null;
 
@@ -142,42 +127,28 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
           </div>
         </div>
 
-        {isDesktop ? (
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-3 gap-4">
-              {visible.map((item) => (
-                <PartnershipCard key={item.id} item={item} format="horizontal" onClick={() => setSelectedPartnership(item)} />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="overflow-hidden" ref={emblaRef}>
-            <div className="flex">
-              {visible.map((item) => {
-                const format = getPartnershipFormat(item);
-                return (
-                  <div key={item.id} className={`flex-none px-1.5 ${format === "vertical" ? "w-[55%]" : "w-[80%]"}`}>
-                    <PartnershipCard item={item} format={format} onClick={() => setSelectedPartnership(item)} />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <MediaCarousel
+          items={visible}
+          renderCard={renderCard}
+          getGallery={getGallery}
+          getKey={getKey}
+        />
 
         <div className="relative z-10 flex justify-center pt-10 pb-6">
           <ScrollTeaser textFr="Ce qu'ils en disent ↓" textEn="What they say ↓" target="#testimonials" light={false} />
         </div>
       </section>
 
-      {selectedPartnership && (
-        <ItemModal
-          gallery={selectedGallery}
-          title={selectedPartnership.name}
-          description={t(selectedPartnership.description, lang)}
-          onClose={() => setSelectedPartnership(null)}
-        />
-      )}
+      <AnimatePresence>
+        {selectedPartnership && (
+          <ItemModal
+            gallery={selectedGallery}
+            title={selectedPartnership.name}
+            description={t(selectedPartnership.description, lang)}
+            onClose={() => setSelectedPartnership(null)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

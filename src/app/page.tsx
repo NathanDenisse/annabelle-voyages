@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, lazy, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { useSiteContent, useSocialLinks, usePortfolio, usePartnerships, useTestimonials, useNextTrip } from "@/hooks/useFirestore";
 import { useLanguageState, LanguageContext } from "@/hooks/useLanguage";
 import Navbar from "@/components/site/Navbar";
@@ -26,16 +26,9 @@ export default function Home() {
   const { items: testimonials } = useTestimonials();
   const { data: nextTrip } = useNextTrip();
 
-  // Page visible après 500ms — indépendant de la vidéo et de Firestore
-  const [pageReady, setPageReady] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setPageReady(true), 500);
-    return () => clearTimeout(t);
-  }, []);
-
   return (
     <LanguageContext.Provider value={{ lang, setLang }}>
-      <main className={`transition-opacity duration-[600ms] ease-out ${pageReady ? "opacity-100" : "opacity-0"}`}>
+      <main className="animate-fade-in">
         <Navbar />
         <Hero content={content} socials={socials} />
         <About content={content} aboutImageUrl={content.aboutImageUrl} socials={socials} />

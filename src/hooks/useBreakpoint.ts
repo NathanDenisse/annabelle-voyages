@@ -5,10 +5,11 @@ import { useState, useEffect } from "react";
 export function useBreakpoint(minWidth: number = 1024) {
   const [isAbove, setIsAbove] = useState(false);
   useEffect(() => {
-    const check = () => setIsAbove(window.innerWidth >= minWidth);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
+    const mql = window.matchMedia(`(min-width: ${minWidth}px)`);
+    setIsAbove(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsAbove(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
   }, [minWidth]);
   return isAbove;
 }
