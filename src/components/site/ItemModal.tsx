@@ -542,29 +542,49 @@ function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolea
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (!isActive && videoRef.current) {
-      videoRef.current.pause();
+    const video = videoRef.current;
+    if (!video) return;
+    if (isActive) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
     }
   }, [isActive]);
 
+  const poster = item.thumbnailUrl || undefined;
+  const isVertical = item.format === "vertical";
+
   return (
-    <>
+    <div className={`relative rounded-xl overflow-hidden w-full ${
+      isVertical ? "max-w-xs aspect-[9/16]" : "aspect-video"
+    }`}>
+      {/* Thumbnail poster visible pendant le chargement */}
+      {poster && !ready && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={poster}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
+      {/* Spinner par-dessus la thumbnail */}
       {!ready && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className="w-10 h-10 border-2 border-white/20 border-t-white/70 rounded-full animate-spin" />
         </div>
       )}
       <video
         ref={videoRef}
-        src={item.url}
+        src={isActive ? item.url : undefined}
+        poster={poster}
         controls
-        autoPlay={isActive}
         playsInline
+        preload="auto"
         onCanPlay={() => setReady(true)}
-        className={`max-w-full max-h-full rounded-xl transition-opacity duration-300 ${
+        className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${
           ready ? "opacity-100" : "opacity-0"
         }`}
       />
-    </>
+    </div>
   );
 }
