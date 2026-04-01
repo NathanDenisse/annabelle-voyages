@@ -487,22 +487,30 @@ function YouTubeFacade({ videoId, isShort }: { videoId: string; isShort: boolean
 // ─── Video with loading spinner ─────────────────────────────────────────────────
 
 function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolean }) {
+  const { lang } = useLanguage();
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
     if (isActive) {
       setReady(false);
-      const video = videoRef.current;
-      if (video) {
-        video.load();
-        video.play().catch(() => {});
-      }
+      setError(false);
+      video.load();
+      // Don't call play() here — let handleCanPlay trigger it after data loads
     } else {
-      const video = videoRef.current;
-      if (video) video.pause();
+      video.pause();
     }
   }, [isActive]);
+
+  const handleCanPlay = useCallback(() => {
+    setReady(true);
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, []);
 
   const poster = item.thumbnailUrl || undefined;
   const isVertical = item.format === "vertical";
@@ -511,7 +519,7 @@ function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolea
     <div className={`relative rounded-xl overflow-hidden w-full ${
       isVertical ? "max-w-xs aspect-[9/16]" : "aspect-video"
     }`}>
-      {poster && !ready && (
+      {poster && !ready && !error && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={poster}
@@ -519,9 +527,17 @@ function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolea
           className="absolute inset-0 w-full h-full object-cover rounded-xl"
         />
       )}
-      {!ready && (
+      {!ready && !error && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className="w-10 h-10 border-2 border-white/20 border-t-white/70 rounded-full animate-spin" />
+        </div>
+      )}
+      {/* Error state */}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/80 rounded-xl">
+          <p className="font-sans text-sm text-white/50">
+            {lang === "fr" ? "Vidéo indisponible" : "Video unavailable"}
+          </p>
         </div>
       )}
       <video
@@ -530,8 +546,9 @@ function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolea
         poster={poster}
         controls
         playsInline
-        preload={isActive ? "auto" : "none"}
-        onCanPlay={() => setReady(true)}
+        preload="auto"
+        onCanPlay={handleCanPlay}
+        onError={() => setError(true)}
         className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${
           ready ? "opacity-100" : "opacity-0"
         }`}

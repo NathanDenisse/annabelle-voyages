@@ -65,7 +65,6 @@ const MediaCard = memo(function MediaCard({
   const [mp4Ready, setMp4Ready] = useState(false);
   const [isOnScreen, setIsOnScreen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   const firstMedia = item.gallery[0] ?? null;
   const mp4CoverSrc = firstMedia?.platform === "mp4" ? firstMedia.url : null;
@@ -89,17 +88,6 @@ const MediaCard = memo(function MediaCard({
     return () => observer.disconnect();
   }, [isMp4]);
 
-  // Play/pause based on visibility
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (isOnScreen) {
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  }, [isOnScreen]);
-
   const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
   const mediaCount = item.gallery.length;
 
@@ -120,12 +108,11 @@ const MediaCard = memo(function MediaCard({
         />
       )}
 
-      {/* MP4 video — only loaded when on screen, fully unloaded when off */}
-      {isMp4 && mp4CoverSrc && (
+      {/* MP4 video — mounted only when on screen, unmounted when off */}
+      {isMp4 && mp4CoverSrc && isOnScreen && (
         <video
-          ref={videoRef}
-          src={isOnScreen ? mp4CoverSrc : undefined}
-          autoPlay muted loop playsInline preload="metadata"
+          src={mp4CoverSrc}
+          autoPlay muted loop playsInline preload="auto"
           onCanPlay={() => setMp4Ready(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
         />
