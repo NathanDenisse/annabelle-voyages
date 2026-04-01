@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState, useEffect, memo, type RefObject } from "react";
+import { useRef, useState, useEffect, memo } from "react";
 import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { Play } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -37,13 +38,9 @@ function getPartnershipFormat(item: Partnership): CardFormat {
 // ─── Card ───
 const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partnership; onClick: () => void; format?: CardFormat }) {
   const { lang } = useLanguage();
-  const [mp4Ready, setMp4Ready] = useState(false);
-  const cardRef = useRef(null);
-  const isVisible = useInView(cardRef as RefObject<Element>, { once: true, margin: "100px" });
 
   const firstMedia = item.gallery[0] ?? null;
-  const isMp4Cover = firstMedia?.platform === "mp4";
-  const mp4Src = firstMedia?.platform === "mp4" ? firstMedia.url : undefined;
+  const isVideo = firstMedia?.type === "video";
 
   const coverImage = (() => {
     if (!firstMedia) return item.logoUrl || null;
@@ -58,29 +55,27 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
 
   return (
     <div
-      ref={cardRef}
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden border border-white/10 hover:border-terracotta-500/40 cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
-      {/* Static cover — thumbnail or image; fades out only when MP4 is ready */}
+      {/* Static cover only — no video in cards */}
       {coverImage ? (
         <Image src={coverImage} alt={item.name} fill
-          className={`object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
+          className="object-cover"
           loading="lazy"
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#4A3230] to-[#2A1815]" />
       )}
 
-      {/* MP4 autoplay — only loads when card is visible in viewport */}
-      {isMp4Cover && mp4Src && isVisible && (
-        <video src={mp4Src} autoPlay muted loop playsInline preload="metadata"
-          onCanPlay={() => setMp4Ready(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
-        />
+      {/* Play icon for video items */}
+      {isVideo && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:bg-black/60 group-hover:scale-110 transition-all duration-200">
+            <Play size={18} className="text-white ml-0.5" fill="white" />
+          </div>
+        </div>
       )}
-
-      {/* YouTube: static thumbnail only in card — iframe loads in popup on click */}
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
 

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, memo, type RefObject } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { MapPin } from "lucide-react";
+import { MapPin, Play } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -62,13 +62,8 @@ const MediaCard = memo(function MediaCard({
   format: CardFormat;
   onClick: () => void;
 }) {
-  const [mp4Ready, setMp4Ready] = useState(false);
-  const cardRef = useRef(null);
-  const isVisible = useInView(cardRef as RefObject<Element>, { once: true, margin: "100px" });
-
   const firstMedia = item.gallery[0] ?? null;
-  const mp4CoverSrc = firstMedia?.platform === "mp4" ? firstMedia.url : null;
-  const isMp4 = !!mp4CoverSrc;
+  const isVideo = firstMedia?.type === "video";
   const thumbnail = getCardThumbnail(item);
 
   const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
@@ -76,32 +71,28 @@ const MediaCard = memo(function MediaCard({
 
   return (
     <div
-      ref={cardRef}
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
-      {/* Static thumbnail — always visible; fades out only when MP4 is ready */}
+      {/* Static thumbnail only — no video in cards */}
       {thumbnail && (
         <Image
           src={thumbnail}
           alt={t(item.title, lang)}
           fill
-          className={`object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
+          className="object-cover"
           loading="lazy"
         />
       )}
 
-      {/* MP4 autoplay — only loads when card is visible in viewport */}
-      {isMp4 && mp4CoverSrc && isVisible && (
-        <video
-          src={mp4CoverSrc}
-          autoPlay muted loop playsInline preload="metadata"
-          onCanPlay={() => setMp4Ready(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
-        />
+      {/* Play icon for video items */}
+      {isVideo && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:bg-black/60 group-hover:scale-110 transition-all duration-200">
+            <Play size={18} className="text-white ml-0.5" fill="white" />
+          </div>
+        </div>
       )}
-
-      {/* YouTube: static thumbnail only in card — iframe loads in popup on click */}
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent pointer-events-none" />
 
