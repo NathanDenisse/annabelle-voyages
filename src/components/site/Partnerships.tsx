@@ -3,7 +3,6 @@
 import { useRef, useState, useEffect, memo } from "react";
 import { useInView, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { Play } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -38,9 +37,14 @@ function getPartnershipFormat(item: Partnership): CardFormat {
 // ─── Card ───
 const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = "horizontal" }: { item: Partnership; onClick: () => void; format?: CardFormat }) {
   const { lang } = useLanguage();
+  const [mp4Ready, setMp4Ready] = useState(false);
+  const [isOnScreen, setIsOnScreen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const firstMedia = item.gallery[0] ?? null;
-  const isVideo = firstMedia?.type === "video";
+  const isMp4Cover = firstMedia?.platform === "mp4";
+  const mp4Src = firstMedia?.platform === "mp4" ? firstMedia.url : undefined;
 
   const coverImage = (() => {
     if (!firstMedia) return item.logoUrl || null;
@@ -50,31 +54,62 @@ const PartnershipCard = memo(function PartnershipCard({ item, onClick, format = 
     return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : item.logoUrl || null;
   })();
 
+  // Only play/load video when card is on screen — fully unload when off screen
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || !isMp4Cover) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsOnScreen(entry.isIntersecting);
+        if (!entry.isIntersecting) {
+          setMp4Ready(false);
+        }
+      },
+      { rootMargin: "50px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isMp4Cover]);
+
+  // Play/pause based on visibility
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isOnScreen) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [isOnScreen]);
+
   const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
   const mediaCount = item.gallery.length;
 
   return (
     <div
+      ref={cardRef}
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden border border-white/10 hover:border-terracotta-500/40 cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
-      {/* Static cover only — no video in cards */}
+      {/* Static cover — visible until video is ready */}
       {coverImage ? (
         <Image src={coverImage} alt={item.name} fill
-          className="object-cover"
+          className={`object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
           loading="lazy"
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#4A3230] to-[#2A1815]" />
       )}
 
-      {/* Play icon for video items */}
-      {isVideo && (
-        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-          <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:bg-black/60 group-hover:scale-110 transition-all duration-200">
-            <Play size={18} className="text-white ml-0.5" fill="white" />
-          </div>
-        </div>
+      {/* MP4 video — only loaded when on screen, fully unloaded when off */}
+      {isMp4Cover && mp4Src && (
+        <video
+          ref={videoRef}
+          src={isOnScreen ? mp4Src : undefined}
+          autoPlay muted loop playsInline preload="metadata"
+          onCanPlay={() => setMp4Ready(true)}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
+        />
       )}
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />

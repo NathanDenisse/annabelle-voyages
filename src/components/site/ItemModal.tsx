@@ -541,13 +541,18 @@ function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolea
   const [ready, setReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Reset ready state when this slide becomes active (video src may need to reload)
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
     if (isActive) {
-      video.play().catch(() => {});
+      setReady(false);
+      const video = videoRef.current;
+      if (video) {
+        video.load();
+        video.play().catch(() => {});
+      }
     } else {
-      video.pause();
+      const video = videoRef.current;
+      if (video) video.pause();
     }
   }, [isActive]);
 
@@ -564,7 +569,7 @@ function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolea
         <img
           src={poster}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover rounded-xl"
         />
       )}
       {/* Spinner par-dessus la thumbnail */}
@@ -575,11 +580,11 @@ function VideoWithLoader({ item, isActive }: { item: MediaItem; isActive: boolea
       )}
       <video
         ref={videoRef}
-        src={isActive ? item.url : undefined}
+        src={item.url}
         poster={poster}
         controls
         playsInline
-        preload="auto"
+        preload={isActive ? "auto" : "none"}
         onCanPlay={() => setReady(true)}
         className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${
           ready ? "opacity-100" : "opacity-0"
