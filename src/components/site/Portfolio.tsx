@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useRef, memo, useCallback } from "react";
-import { useInView, AnimatePresence } from "framer-motion";
+import { useState, useRef, useEffect, memo, useCallback } from "react";
+import { useInView } from "framer-motion";
 import Image from "next/image";
-import { MapPin } from "lucide-react";
+import { MapPin, X, Volume2, VolumeX } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t, filterLabels } from "@/lib/i18n";
-import { PortfolioItem, MediaCategory, SiteContent, CATEGORY_LABELS } from "@/types";
+import { PortfolioItem, MediaCategory, SiteContent, CATEGORY_LABELS, MediaItem } from "@/types";
 import ScrollTeaser from "./ScrollTeaser";
 import { getYouTubeId } from "@/lib/storage";
 import ItemModal from "./ItemModal";
@@ -29,7 +29,7 @@ function getCardThumbnail(item: PortfolioItem): string {
   return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : "";
 }
 
-// ─── Card ───
+// ─── Card with autoplay video ───
 const PortfolioCard = memo(function PortfolioCard({
   item,
   lang,
@@ -41,26 +41,70 @@ const PortfolioCard = memo(function PortfolioCard({
   format: CardFormat;
   onClick: () => void;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [mp4Ready, setMp4Ready] = useState(false);
+
+  const firstMedia = item.gallery[0] ?? null;
+  const isMp4 = firstMedia?.platform === "mp4";
+  const isYouTube = firstMedia?.type === "video" && !isMp4;
   const thumbnail = getCardThumbnail(item);
-  const isVideo = item.gallery[0]?.type === "video";
+  const youtubeId = isYouTube ? getYouTubeId(firstMedia.url) : null;
   const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
   const mediaCount = item.gallery.length;
 
+  // Intersection Observer — autoplay/pause based on visibility
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { rootMargin: "50px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Play/pause MP4
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isVisible) { video.play().catch(() => {}); } else { video.pause(); }
+  }, [isVisible]);
+
   return (
     <div
+      ref={cardRef}
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
-      {thumbnail && (
-        <Image src={thumbnail} alt={t(item.title, lang)} fill className="object-cover" loading="lazy" />
+      {/* Thumbnail fallback — fades out when MP4 video is ready */}
+      {thumbnail ? (
+        <Image src={thumbnail} alt={t(item.title, lang)} fill
+          className={`object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
+          loading="lazy" />
+      ) : isMp4 ? (
+        <div className="absolute inset-0 bg-brown-900" />
+      ) : null}
+
+      {/* MP4 autoplay — muted, looping, like a GIF */}
+      {isMp4 && firstMedia.url && isVisible && (
+        <video ref={videoRef} src={firstMedia.url}
+          autoPlay muted loop playsInline preload="metadata"
+          onCanPlay={() => setMp4Ready(true)}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
+        />
       )}
 
-      {isVideo && (
-        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-          <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-            <div className="w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-l-[13px] border-l-white ml-1" />
-          </div>
-        </div>
+      {/* YouTube autoplay embed — muted, no controls, looping */}
+      {isYouTube && youtubeId && isVisible && (
+        <iframe
+          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&vq=small`}
+          allow="autoplay; encrypted-media"
+          className="absolute inset-0 w-full h-full border-none pointer-events-none"
+          loading="lazy"
+        />
       )}
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent pointer-events-none" />
@@ -90,11 +134,63 @@ const PortfolioCard = memo(function PortfolioCard({
   );
 });
 
+// ─── Expanded Video Overlay (click to expand with sound + controls) ───
+function ExpandedVideo({ item, onClose }: { item: MediaItem; onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(false);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const toggleMute = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setMuted(videoRef.current.muted);
+    }
+  }, []);
+
+  if (item.platform === "mp4") {
+    const isVertical = item.format === "vertical";
+    return (
+      <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={onClose}>
+        <div onClick={(e) => e.stopPropagation()} className={`relative ${isVertical ? "h-[90vh] max-w-sm" : "w-[95vw] max-w-4xl"}`}>
+          <video ref={videoRef} src={item.url} autoPlay loop playsInline controls
+            className="w-full h-full rounded-xl object-contain" />
+          <button onClick={toggleMute}
+            className="absolute top-3 left-3 p-2.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors z-10">
+            {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
+        </div>
+        <button onClick={onClose}
+          className="absolute top-4 right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-10">
+          <X size={24} />
+        </button>
+      </div>
+    );
+  }
+
+  // YouTube/external → open in new tab
+  window.open(item.url, "_blank", "noopener");
+  onClose();
+  return null;
+}
+
 // ─── Main component ───
 export default function Portfolio({ items, content }: PortfolioProps) {
   const { lang } = useLanguage();
   const [activeCategory, setActiveCategory] = useState<MediaCategory | "all">("all");
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
+  const [expandedVideo, setExpandedVideo] = useState<MediaItem | null>(null);
   const headerRef = useRef(null);
   const isInView = useInView(headerRef, { once: true, margin: "-80px" });
 
@@ -106,6 +202,21 @@ export default function Portfolio({ items, content }: PortfolioProps) {
   const getGallery = useCallback((item: PortfolioItem) => item.gallery, []);
   const getKey = useCallback((item: PortfolioItem) => item.id, []);
 
+  const handleCardClick = useCallback((item: PortfolioItem) => {
+    const first = item.gallery[0];
+    if (!first) return;
+    // Single video → expand it
+    if (item.gallery.length === 1 && first.type === "video") {
+      if (first.platform === "mp4") {
+        setExpandedVideo(first);
+      } else {
+        window.open(first.url, "_blank", "noopener");
+      }
+      return;
+    }
+    setSelectedItem(item);
+  }, []);
+
   const renderCard = useCallback(
     (item: PortfolioItem, format: CardFormat) => (
       <PortfolioCard
@@ -113,10 +224,10 @@ export default function Portfolio({ items, content }: PortfolioProps) {
         item={item}
         lang={lang}
         format={format}
-        onClick={() => setSelectedItem(item)}
+        onClick={() => handleCardClick(item)}
       />
     ),
-    [lang]
+    [lang, handleCardClick]
   );
 
   const selectedGallery = selectedItem?.gallery ?? [];
@@ -158,18 +269,20 @@ export default function Portfolio({ items, content }: PortfolioProps) {
         <ScrollTeaser textFr="Ils m'ont fait confiance ↓" textEn="They trusted me ↓" target="#partnerships" light />
       </div>
 
-      <AnimatePresence>
-        {selectedItem && (
-          <ItemModal
-            gallery={selectedGallery}
-            title={t(selectedItem.title, lang)}
-            description={selectedItem.description ? t(selectedItem.description, lang) : undefined}
-            location={selectedItem.location}
-            categoryLabel={t(CATEGORY_LABELS[selectedItem.category], lang)}
-            onClose={() => setSelectedItem(null)}
-          />
-        )}
-      </AnimatePresence>
+      {expandedVideo && (
+        <ExpandedVideo item={expandedVideo} onClose={() => setExpandedVideo(null)} />
+      )}
+
+      {selectedItem && (
+        <ItemModal
+          gallery={selectedGallery}
+          title={t(selectedItem.title, lang)}
+          description={selectedItem.description ? t(selectedItem.description, lang) : undefined}
+          location={selectedItem.location}
+          categoryLabel={t(CATEGORY_LABELS[selectedItem.category], lang)}
+          onClose={() => setSelectedItem(null)}
+        />
+      )}
     </section>
   );
 }

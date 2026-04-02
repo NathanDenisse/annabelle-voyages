@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, memo, useCallback } from "react";
-import { useInView, AnimatePresence } from "framer-motion";
+import { useRef, useState, useEffect, memo, useCallback } from "react";
+import { useInView } from "framer-motion";
 import Image from "next/image";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t } from "@/lib/i18n";
@@ -16,7 +16,7 @@ interface PartnershipsProps {
   content: SiteContent;
 }
 
-// ─── Card ───
+// ─── Card with autoplay video ───
 const PartnershipCard = memo(function PartnershipCard({
   item,
   lang,
@@ -28,8 +28,15 @@ const PartnershipCard = memo(function PartnershipCard({
   format: CardFormat;
   onClick: () => void;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [mp4Ready, setMp4Ready] = useState(false);
+
   const firstMedia = item.gallery[0] ?? null;
-  const isVideo = firstMedia?.type === "video";
+  const isMp4 = firstMedia?.platform === "mp4";
+  const isYouTube = firstMedia?.type === "video" && !isMp4;
+  const youtubeId = isYouTube ? getYouTubeId(firstMedia.url) : null;
 
   const coverImage = (() => {
     if (!firstMedia) return item.logoUrl || null;
@@ -42,23 +49,54 @@ const PartnershipCard = memo(function PartnershipCard({
   const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";
   const mediaCount = item.gallery.length;
 
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { rootMargin: "50px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isVisible) { video.play().catch(() => {}); } else { video.pause(); }
+  }, [isVisible]);
+
   return (
     <div
+      ref={cardRef}
       onClick={onClick}
       className={`group relative rounded-2xl overflow-hidden border border-white/10 hover:border-terracotta-500/40 cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${aspectClass}`}
     >
       {coverImage ? (
-        <Image src={coverImage} alt={item.name} fill className="object-cover" loading="lazy" />
+        <Image src={coverImage} alt={item.name} fill
+          className={`object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-0" : "opacity-100"}`}
+          loading="lazy" />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#4A3230] to-[#2A1815]" />
       )}
 
-      {isVideo && (
-        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-          <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-            <div className="w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-l-[13px] border-l-white ml-1" />
-          </div>
-        </div>
+      {/* MP4 autoplay */}
+      {isMp4 && firstMedia.url && isVisible && (
+        <video ref={videoRef} src={firstMedia.url}
+          autoPlay muted loop playsInline preload="metadata"
+          onCanPlay={() => setMp4Ready(true)}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${mp4Ready ? "opacity-100" : "opacity-0"}`}
+        />
+      )}
+
+      {/* YouTube autoplay embed */}
+      {isYouTube && youtubeId && isVisible && (
+        <iframe
+          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&vq=small`}
+          allow="autoplay; encrypted-media"
+          className="absolute inset-0 w-full h-full border-none pointer-events-none"
+          loading="lazy"
+        />
       )}
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
@@ -139,16 +177,14 @@ export default function Partnerships({ items, content }: PartnershipsProps) {
         </div>
       </section>
 
-      <AnimatePresence>
-        {selectedPartnership && (
-          <ItemModal
-            gallery={selectedGallery}
-            title={selectedPartnership.name}
-            description={t(selectedPartnership.description, lang)}
-            onClose={() => setSelectedPartnership(null)}
-          />
-        )}
-      </AnimatePresence>
+      {selectedPartnership && (
+        <ItemModal
+          gallery={selectedGallery}
+          title={selectedPartnership.name}
+          description={t(selectedPartnership.description, lang)}
+          onClose={() => setSelectedPartnership(null)}
+        />
+      )}
     </>
   );
 }
