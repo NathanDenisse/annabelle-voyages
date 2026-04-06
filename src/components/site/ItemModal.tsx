@@ -220,14 +220,14 @@ function GridView({
     <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain">
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-4">
         {gallery.map((item, idx) => (
-          <GridThumb key={idx} item={item} isActive={idx === activeIndex} onClick={() => onSelect(idx)} />
+          <GridThumb key={idx} item={item} isActive={idx === activeIndex} onClick={() => onSelect(idx)} index={idx} />
         ))}
       </div>
     </div>
   );
 }
 
-function GridThumb({ item, isActive, onClick }: { item: MediaItem; isActive: boolean; onClick: () => void }) {
+function GridThumb({ item, isActive, onClick, index }: { item: MediaItem; isActive: boolean; onClick: () => void; index: number }) {
   const thumbnail = (() => {
     if (item.type === "image") return item.url;
     if (item.platform === "mp4") return item.thumbnailUrl ?? null;
@@ -248,7 +248,7 @@ function GridThumb({ item, isActive, onClick }: { item: MediaItem; isActive: boo
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={thumbnail}
-          alt="Media thumbnail"
+          alt={`Media ${index + 1}`}
           className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
           loading="lazy"
         />
@@ -460,7 +460,7 @@ const ScrollItem = memo(function ScrollItem({ item, isActive }: { item: MediaIte
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={item.url}
-          alt="Gallery image"
+          alt=""
           draggable={false}
           onLoad={() => setLoaded(true)}
           className={`max-w-full max-h-full object-contain rounded-xl select-none transition-opacity duration-300 ${
@@ -521,7 +521,7 @@ const YouTubeFacade = memo(function YouTubeFacade({ videoId, isShort, isActive }
           {/* Thumbnail */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+            src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
             alt="Video thumbnail"
             className="w-full h-full object-cover"
             loading="lazy"

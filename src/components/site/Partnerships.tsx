@@ -43,7 +43,7 @@ const PartnershipCard = memo(function PartnershipCard({
     if (firstMedia.type === "image") return firstMedia.url;
     if (firstMedia.platform === "mp4") return firstMedia.thumbnailUrl || item.logoUrl || null;
     const videoId = getYouTubeId(firstMedia.url);
-    return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : item.logoUrl || null;
+    return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : item.logoUrl || null;
   })();
 
   const aspectClass = format === "vertical" ? "aspect-[9/16]" : "aspect-[16/10]";

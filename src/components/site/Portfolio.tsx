@@ -26,7 +26,7 @@ function getCardThumbnail(item: PortfolioItem): string {
   if (first.type === "image") return first.url;
   if (first.platform === "mp4") return first.thumbnailUrl || "";
   const id = getYouTubeId(first.url);
-  return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : "";
+  return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : "";
 }
 
 // ─── Card with autoplay video ───
@@ -110,7 +110,7 @@ const PortfolioCard = memo(function PortfolioCard({
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent pointer-events-none" />
 
       <div className="absolute top-3 left-3 z-10">
-        <span className="bg-white/80 backdrop-blur-sm text-brown-700 text-xs font-sans font-medium px-2.5 py-1 rounded-full">
+        <span className="bg-white/90 text-brown-700 text-xs font-sans font-medium px-2.5 py-1 rounded-full">
           {t(CATEGORY_LABELS[item.category], lang)}
         </span>
       </div>

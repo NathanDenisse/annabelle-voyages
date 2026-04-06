@@ -22,7 +22,7 @@ export default function NextTrip({ data }: NextTripProps) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !data.backgroundVideoUrl) return;
-    const tryPlay = () => { video.muted = true; video.play().catch(() => {}); };
+    const tryPlay = () => { if (!video.paused) return; video.muted = true; video.play().catch(() => {}); };
     tryPlay();
     const t1 = setTimeout(tryPlay, 500);
     const onVisibility = () => { if (document.visibilityState === "visible") tryPlay(); };
@@ -34,7 +34,7 @@ export default function NextTrip({ data }: NextTripProps) {
     const section = sectionRef.current;
     const video = videoRef.current;
     if (!section || !video) return;
-    const onTouch = () => { video.muted = true; video.play().catch(() => {}); };
+    const onTouch = () => { if (!video.paused) return; video.muted = true; video.play().catch(() => {}); };
     section.addEventListener("touchstart", onTouch, { passive: true });
     return () => section.removeEventListener("touchstart", onTouch);
   }, []);
@@ -60,7 +60,7 @@ export default function NextTrip({ data }: NextTripProps) {
         muted
         loop
         playsInline
-        preload="auto"
+        preload="metadata"
         {...{ "webkit-playsinline": "true" }}
         onCanPlay={() => setVideoReady(true)}
         onPlaying={() => setVideoReady(true)}

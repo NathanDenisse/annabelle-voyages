@@ -75,12 +75,10 @@ function DesktopGrid({ items, lang }: { items: Testimonial[]; lang: "fr" | "en" 
       {items.map((item, i) => (
         <div
           key={item.id}
-          className={`transition-all duration-700 ease-out`}
-          style={{
-            transitionDelay: `${i * 100}ms`,
-            opacity: isInView ? 1 : 0,
-            transform: isInView ? "translateY(0)" : "translateY(24px)",
-          }}
+          className={`transition-all duration-700 ease-out ${
+            isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+          }`}
+          style={{ transitionDelay: `${i * 100}ms` }}
         >
           <TestimonialCard item={item} lang={lang} />
         </div>

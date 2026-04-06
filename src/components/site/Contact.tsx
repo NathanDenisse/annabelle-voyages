@@ -19,12 +19,21 @@ export default function Contact({ content }: ContactProps) {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [touched, setTouched] = useState({ name: false, email: false, message: false });
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const errors = {
+    name: touched.name && !form.name.trim(),
+    email: touched.email && (!form.email.trim() || !isValidEmail(form.email)),
+    message: touched.message && !form.message.trim(),
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.message) return;
+    setTouched({ name: true, email: true, message: true });
+    if (!form.name.trim() || !form.email.trim() || !isValidEmail(form.email) || !form.message.trim()) return;
 
     setLoading(true);
     try {
@@ -34,8 +43,9 @@ export default function Contact({ content }: ContactProps) {
         message: form.message,
       });
       setForm({ name: "", email: "", message: "" });
+      setTouched({ name: false, email: false, message: false });
       setSent(true);
-      setTimeout(() => setSent(false), 5000);
+      setTimeout(() => setSent(false), 8000);
       toast.success(
         lang === "fr"
           ? "Message envoyé ! Je vous répondrai bientôt."
@@ -96,10 +106,14 @@ export default function Contact({ content }: ContactProps) {
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onBlur={() => setTouched((p) => ({ ...p, name: true }))}
                 required
-                className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 font-sans text-sm text-white placeholder-white/25 focus:border-terracotta-400 focus:bg-white/10 transition-colors"
+                className={`w-full bg-white/5 border rounded-xl px-4 py-3 font-sans text-sm text-white placeholder-white/25 focus:border-terracotta-400 focus:bg-white/10 transition-colors ${errors.name ? "border-red-400/60" : "border-white/15"}`}
                 placeholder={lang === "fr" ? "Votre nom" : "Your name"}
               />
+              {errors.name && (
+                <p className="font-sans text-xs text-red-400/80 mt-1">{lang === "fr" ? "Le nom est requis" : "Name is required"}</p>
+              )}
             </div>
             <div>
               <label htmlFor="contact-email" className="block font-sans text-xs font-medium text-white/50 mb-2 tracking-wide uppercase">
@@ -110,10 +124,14 @@ export default function Contact({ content }: ContactProps) {
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onBlur={() => setTouched((p) => ({ ...p, email: true }))}
                 required
-                className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 font-sans text-sm text-white placeholder-white/25 focus:border-terracotta-400 focus:bg-white/10 transition-colors"
-                placeholder="votre@email.com"
+                className={`w-full bg-white/5 border rounded-xl px-4 py-3 font-sans text-sm text-white placeholder-white/25 focus:border-terracotta-400 focus:bg-white/10 transition-colors ${errors.email ? "border-red-400/60" : "border-white/15"}`}
+                placeholder={lang === "fr" ? "votre@email.com" : "your@email.com"}
               />
+              {errors.email && (
+                <p className="font-sans text-xs text-red-400/80 mt-1">{lang === "fr" ? "Email invalide" : "Invalid email"}</p>
+              )}
             </div>
           </div>
 
@@ -125,16 +143,28 @@ export default function Contact({ content }: ContactProps) {
               id="contact-message"
               value={form.message}
               onChange={(e) => setForm({ ...form, message: e.target.value })}
+              onBlur={() => setTouched((p) => ({ ...p, message: true }))}
               required
               rows={5}
-              className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 font-sans text-sm text-white placeholder-white/25 focus:border-terracotta-400 focus:bg-white/10 transition-colors resize-none"
+              className={`w-full bg-white/5 border rounded-xl px-4 py-3 font-sans text-sm text-white placeholder-white/25 focus:border-terracotta-400 focus:bg-white/10 transition-colors resize-none ${errors.message ? "border-red-400/60" : "border-white/15"}`}
               placeholder={
                 lang === "fr"
                   ? "Décrivez votre projet ou proposition de collaboration..."
                   : "Describe your project or collaboration proposal..."
               }
             />
+            {errors.message && (
+              <p className="font-sans text-xs text-red-400/80 mt-1">{lang === "fr" ? "Le message est requis" : "Message is required"}</p>
+            )}
           </div>
+
+          {sent && (
+            <div className="mb-4 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-center">
+              <p className="font-sans text-sm text-green-400">
+                {lang === "fr" ? "Message envoyé avec succès ! Je vous répondrai bientôt." : "Message sent successfully! I'll get back to you soon."}
+              </p>
+            </div>
+          )}
 
           <button
             type="submit"

@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 const SYSTEM_PROMPT = `Tu es l'assistant d'Annabelle Cathala, une créatrice de contenu voyage française vivant à Dublin. Elle crée des photos et vidéos de voyages dans les plus beaux endroits du monde, avec un style authentique, chaleureux et inspirant. Génère des textes courts, élégants et engageants pour son portfolio web. Réponds uniquement en JSON avec un tableau "suggestions" de 3 strings.`;
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+    const { allowed } = rateLimit(ip, { maxRequests: 20, windowMs: 60_000 });
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const { field, context, lang } = await req.json();
     if (!field) {
       return NextResponse.json({ error: "Missing field" }, { status: 400 });

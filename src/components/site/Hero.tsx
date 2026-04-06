@@ -25,13 +25,13 @@ export default function Hero({ content, socials }: HeroProps) {
     if (!video || !videoUrl) return;
 
     const tryPlay = () => {
+      if (!video.paused) return;
       video.muted = true;
       video.play().catch(() => {});
     };
 
     tryPlay();
     const t1 = setTimeout(tryPlay, 500);
-    const t2 = setTimeout(tryPlay, 1500);
 
     const onVisibility = () => {
       if (document.visibilityState === "visible") tryPlay();
@@ -40,7 +40,6 @@ export default function Hero({ content, socials }: HeroProps) {
 
     return () => {
       clearTimeout(t1);
-      clearTimeout(t2);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [videoUrl]);
@@ -52,6 +51,7 @@ export default function Hero({ content, socials }: HeroProps) {
     if (!section || !video) return;
 
     const onTouch = () => {
+      if (!video.paused) return;
       video.muted = true;
       video.play().catch(() => {});
     };
@@ -79,7 +79,7 @@ export default function Hero({ content, socials }: HeroProps) {
           muted
           loop
           playsInline
-          preload="auto"
+          preload="metadata"
           {...{ "webkit-playsinline": "true" }}
           onCanPlay={() => setVideoReady(true)}
           onPlaying={() => setVideoReady(true)}
@@ -98,7 +98,7 @@ export default function Hero({ content, socials }: HeroProps) {
         </p>
 
         <h1
-          className="font-serif italic font-normal text-[5rem] sm:text-[7rem] md:text-[9rem] lg:text-[11rem] text-white leading-none mb-1"
+          className="font-serif italic font-normal text-[3rem] sm:text-[5rem] md:text-[7rem] lg:text-[9rem] xl:text-[11rem] text-white leading-none mb-1"
           style={{ textShadow: "0 4px 40px rgba(0,0,0,0.35), 0 1px 8px rgba(0,0,0,0.25)" }}
         >
           Annabelle
